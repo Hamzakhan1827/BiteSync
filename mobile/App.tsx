@@ -1,11 +1,11 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView,
-  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl
+  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
-import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera } from 'lucide-react-native';
+import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera, LogOut, Info, MessageCircle, PenTool } from 'lucide-react-native';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -94,6 +94,7 @@ export default function App() {
   const [showWelcome, setShowWelcome] = useState(false);
   const [username, setUsername] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
+  const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
   const [detailItem, setDetailItem] = useState<any>(null);
   const [itemReviews, setItemReviews] = useState<any[]>([]);
   const [reviewOffset, setReviewOffset] = useState(0);
@@ -106,6 +107,7 @@ export default function App() {
   const [existingReviewId, setExistingReviewId] = useState<string | null>(null);
   const [existingReviewCreatedAt, setExistingReviewCreatedAt] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
+  const [showLimit, setShowLimit] = useState(false);
   const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [reviewStats, setReviewStats] = useState<Record<string, { up: number; total: number }>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -136,6 +138,14 @@ export default function App() {
 
   const AVATAR_EMOJIS = ['🧑‍🍳', '🦊', '🐼', '🐨', '🐸', '🦁', '🐻', '🐙'];
 
+  const getAvatarIndex = (name: string) => {
+    // Deterministic hash based on name
+    let hash = 0;
+    const n = name || 'Anonymous';
+    for (let i = 0; i < n.length; i++) hash = n.charCodeAt(i) + ((hash << 5) - hash);
+    return Math.abs(hash) % AVATAR_EMOJIS.length;
+  };
+
   const canEditUsername = () => {
     if (!usernameLastChanged) return true;
     return (Date.now() - usernameLastChanged.getTime()) / (1000 * 60 * 60 * 24) >= 30;
@@ -143,11 +153,11 @@ export default function App() {
 
   const openSidebar = () => {
     setSidebarOpen(true);
-    Animated.timing(sidebarAnim, { toValue: 0, duration: 280, useNativeDriver: true }).start();
+    Animated.timing(sidebarAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
   };
 
   const closeSidebar = () => {
-    Animated.timing(sidebarAnim, { toValue: -300, duration: 220, useNativeDriver: true }).start(() => setSidebarOpen(false));
+    Animated.timing(sidebarAnim, { toValue: -300, duration: 250, useNativeDriver: true }).start(() => setSidebarOpen(false));
   };
 
   const navigateFromSidebar = (tab: 'home' | 'review' | 'profile') => {
@@ -324,7 +334,7 @@ export default function App() {
       const { data, error } = await supabase
         .from('reviews')
         .select(`
-          id, created_at, rating_thumbs, private_note, public_note,
+          id, created_at, rating_thumbs, private_note, public_note, photo_url,
           menu_items (
             name, image_url,
             menu_categories (
@@ -453,24 +463,31 @@ export default function App() {
       const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
       const filename = `${session!.user.id}-${Date.now()}.${ext}`;
 
-      // FormData approach — works with local file:// URIs in React Native
-      const formData = new FormData();
-      formData.append('file', { uri: localUri, name: filename, type: contentType } as any);
-
-      const { data: sessionData } = await supabase.auth.getSession();
-      const token = sessionData.session?.access_token;
-      const supabaseUrl = process.env.EXPO_PUBLIC_SUPABASE_URL;
-
-      const res = await fetch(`${supabaseUrl}/storage/v1/object/review-photos/${filename}`, {
-        method: 'POST',
-        headers: { Authorization: `Bearer ${token}` },
-        body: formData,
+      // Convert local URI to Blob for Supabase upload (Robust method)
+      const blob: any = await new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.onload = function () { resolve(xhr.response); };
+        xhr.onerror = function (e) { 
+          console.error('XHR Error:', e);
+          reject(new TypeError("Network request failed")); 
+        };
+        xhr.responseType = "blob";
+        xhr.open("GET", localUri, true);
+        xhr.send(null);
       });
 
-      if (!res.ok) throw new Error(`Upload error: ${res.status}`);
+      const { data, error } = await supabase.storage
+        .from('review-photos')
+        .upload(filename, blob, { 
+          contentType,
+          cacheControl: '3600',
+          upsert: false 
+        });
 
-      const { data } = supabase.storage.from('review-photos').getPublicUrl(filename);
-      return data.publicUrl;
+      if (error) throw error;
+
+      const { data: urlData } = supabase.storage.from('review-photos').getPublicUrl(filename);
+      return urlData.publicUrl;
     } catch (err) {
       console.error('Upload failed:', err);
       return null;
@@ -485,7 +502,11 @@ export default function App() {
   const handleDishSearchSelect = (dish: any) => {
     const restId = dish.menu_categories?.restaurant_id;
     const restObj = restaurants.find((r: any) => r.id === restId);
-    if (restObj) handleRestaurantSelect(restObj);
+    if (restObj) {
+      setSelectedRestaurant(restObj);
+      fetchMenu(restObj.id);
+      openDetailPage(dish);
+    }
   };
 
   const handleAuth = async (signUp: boolean) => {
@@ -535,49 +556,86 @@ export default function App() {
     setExistingReviewId(null); setExistingReviewCreatedAt(null); setReviewImage(null); setShowPhotoPicker(false);
   };
 
-  const openReviewModal = async (item: any) => {
+  const openReviewModal = (item: any) => {
     if (!session?.user) return;
     setSelectedItem(item);
     setRatingThumbs(null); setPrivateNote(''); setPublicNote('');
     setExistingReviewId(null); setExistingReviewCreatedAt(null); setReviewImage(null);
-    const { data } = await supabase.from('reviews').select('id, created_at, rating_thumbs, private_note, public_note')
-      .eq('user_id', session.user.id).eq('menu_item_id', item.id).maybeSingle();
-    if (data) {
-      setExistingReviewId(data.id);
-      setExistingReviewCreatedAt(data.created_at);
-      setRatingThumbs(data.rating_thumbs);
-      setPrivateNote(data.private_note || '');
-      setPublicNote(data.public_note || '');
+  };
+
+  const openEditModal = (review: any) => {
+    const minsElapsed = (Date.now() - new Date(review.created_at).getTime()) / 60000;
+    if (minsElapsed > 5) {
+      Alert.alert('Edit Window Closed', 'Reviews can only be edited within 5 minutes of submission.');
+      return;
     }
+    setSelectedItem(review.menu_items);
+    setExistingReviewId(review.id);
+    setExistingReviewCreatedAt(review.created_at);
+    setRatingThumbs(review.rating_thumbs);
+    setPrivateNote(review.private_note || '');
+    setPublicNote(review.public_note || '');
+    setReviewImage(review.photo_url || null);
   };
 
   const submitReview = async () => {
-    if (!selectedItem || !session?.user) return;
+    if (!selectedItem || !session?.user) {
+      Alert.alert('System Error', 'Session or Item not found. Please reload.');
+      return;
+    }
     setSubmitting(true);
+    console.log('Submitting review...');
     try {
       let photoUrl: string | null = null;
-      if (reviewImage) photoUrl = await uploadReviewImage(reviewImage);
+      if (reviewImage) {
+        if (reviewImage.startsWith('http')) {
+          // Already uploaded (e.g. from existing review)
+          photoUrl = reviewImage;
+        } else {
+          // Local URI, needs upload
+          photoUrl = await uploadReviewImage(reviewImage);
+          if (!photoUrl) {
+            Alert.alert('Upload Failed', 'The photo could not be uploaded. Please check your connection and try again.');
+            setSubmitting(false);
+            return;
+          }
+        }
+      }
 
       if (existingReviewId) {
-        const minsElapsed = (Date.now() - new Date(existingReviewCreatedAt!).getTime()) / 60000;
-        if (minsElapsed > 5) {
-          Alert.alert('Edit Window Closed', 'Reviews can only be edited within 5 minutes of submission.');
-          return;
-        }
         const updates: any = { rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote };
         if (photoUrl) updates.photo_url = photoUrl;
         const { error } = await supabase.from('reviews').update(updates).eq('id', existingReviewId);
         if (error) throw error;
       } else {
-        const todayStart = new Date(); todayStart.setHours(0, 0, 0, 0);
-        const { count, error: countError } = await supabase.from('reviews').select('id', { count: 'exact', head: true })
-          .eq('user_id', session.user.id).gte('created_at', todayStart.toISOString());
-        if (countError) throw countError;
-        if ((count ?? 0) >= 5) {
-          Alert.alert('Daily Limit Reached', "You've submitted 5 reviews today. Come back tomorrow!");
+        const now = new Date();
+        const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
+        
+        const [totalRes, itemRes] = await Promise.all([
+          supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).gte('created_at', todayStart),
+          supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('menu_item_id', selectedItem.id)
+        ]);
+
+        const totalToday = totalRes.count ?? 0;
+        const itemTotal = itemRes.count ?? 0;
+
+        if (totalToday >= 5 || itemTotal >= 2) {
+          setSubmitting(false);
+          setShowLimit(true);
+          // Set a specific message if it was an item limit
+          const msg = itemTotal >= 2 ? "You've already reviewed this dish twice!" : "You've reached your 5 daily reviews limit.";
+          Alert.alert('Limit Reached', msg); // Using alert too for absolute clarity
+          setTimeout(() => setShowLimit(false), 4000);
           return;
         }
-        const insert: any = { user_id: session.user.id, menu_item_id: selectedItem.id, rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote };
+
+        const insert: any = { 
+          user_id: session.user.id, 
+          menu_item_id: selectedItem.id, 
+          rating_thumbs: ratingThumbs, 
+          private_note: privateNote, 
+          public_note: publicNote
+        };
         if (photoUrl) insert.photo_url = photoUrl;
         const { error } = await supabase.from('reviews').insert(insert);
         if (error) throw error;
@@ -588,8 +646,13 @@ export default function App() {
       setTimeout(() => setShowSuccess(false), 2500);
       fetchDiary();
       if (selectedRestaurant) fetchMenu(selectedRestaurant.id);
-    } catch (err: any) { Alert.alert('Error', err.message); }
-    finally { setSubmitting(false); }
+      if (detailItem) fetchItemReviews(detailItem.id, 0, false);
+    } catch (err: any) { 
+      console.error('Submit Error:', err);
+      Alert.alert('Submission Error', err.message || 'An unexpected error occurred. Please try again.'); 
+    } finally { 
+      setSubmitting(false); 
+    }
   };
 
   const getScoreBadge = (itemId: string) => {
@@ -623,7 +686,7 @@ export default function App() {
     try {
       const [countResult, dataResult] = await Promise.all([
         supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('menu_item_id', itemId).neq('public_note', ''),
-        supabase.from('reviews').select('id, rating_thumbs, public_note, created_at, users(full_name)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
+        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, users(full_name)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
       ]);
       setReviewTotal(countResult.count || 0);
       if (append) { setItemReviews(prev => [...prev, ...(dataResult.data || [])]); }
@@ -752,7 +815,9 @@ export default function App() {
         ) : (
           <>
             <TouchableOpacity onPress={openSidebar}><Menu color="#111" size={24} /></TouchableOpacity>
-            <Text style={styles.headerTitle}>BiteSync</Text>
+            <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); }}>
+              <Text style={[styles.headerTitle, { marginLeft: 8 }]}>BiteSync</Text>
+            </TouchableOpacity>
             <TouchableOpacity onPress={() => setCurrentTab('profile')} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#00A86B' }}>
               <Text style={{ fontSize: 18 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
             </TouchableOpacity>
@@ -778,25 +843,10 @@ export default function App() {
               <Text style={{ color: '#888', flex: 1, fontSize: 15 }}>Search restaurants or dishes...</Text>
             </TouchableOpacity>
 
-            {/* FAVOURITES */}
-            {favourites.length > 0 && (
-              <>
-                <Text style={styles.sectionTitle}>❤️ Your Favourites</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20, marginBottom: 28 }}>
-                  {restaurants.filter(r => favourites.includes(r.id)).map(rest => (
-                    <TouchableOpacity key={'fav-' + rest.id} style={{ marginRight: 14, alignItems: 'center', width: 88 }} onPress={() => handleRestaurantSelect(rest)}>
-                      <Image source={{ uri: getRestaurantImage(rest) }} style={{ width: 72, height: 72, borderRadius: 36, borderWidth: 2, borderColor: '#00A86B', marginBottom: 6 }} />
-                      <Text style={{ color: '#111', fontSize: 11, fontWeight: '700', textAlign: 'center' }} numberOfLines={2}>{rest.name}</Text>
-                    </TouchableOpacity>
-                  ))}
-                </ScrollView>
-              </>
-            )}
-
-            {/* LIKED DISHES */}
+            {/* FAVOURITE DISHES */}
             {likedItemDetails.length > 0 && (
               <>
-                <Text style={styles.sectionTitle}>❤️ Your Liked Dishes</Text>
+                <Text style={styles.sectionTitle}>❤️ Your Favourite Dishes</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20, marginBottom: 28 }}>
                   {likedItemDetails.map(dish => (
                     <TouchableOpacity key={'liked-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#FECDD3', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 }}
@@ -820,6 +870,10 @@ export default function App() {
                 </ScrollView>
               </>
             )}
+
+
+
+
 
             {/* TRENDING DISHES */}
             {trendingDishes.length > 0 && (
@@ -859,10 +913,6 @@ export default function App() {
                           <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{openStatus ? '● Open' : '● Closed'}</Text>
                         </View>
                       )}
-                      <TouchableOpacity style={{ position: 'absolute', top: 8, right: 8, backgroundColor: 'rgba(255,255,255,0.9)', borderRadius: 16, padding: 6 }}
-                        onPress={() => toggleFavourite(rest.id)}>
-                        <Heart color={favourites.includes(rest.id) ? '#EF4444' : '#AAA'} fill={favourites.includes(rest.id) ? '#EF4444' : 'none'} size={16} />
-                      </TouchableOpacity>
                     </View>
                     <View style={{ padding: 14, width: '100%' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
@@ -994,12 +1044,67 @@ export default function App() {
                     <View>
                       {itemReviews.map((r: any, idx: number) => (
                         <View key={r.id} style={{ padding: 14, borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAEAEA' }}>
-                          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 6 }}>
-                            <Text style={{ color: '#111', fontWeight: '700' }}>{r.users?.full_name || 'Anonymous Diner'}</Text>
-                            {r.rating_thumbs === true ? <ThumbsUp color="#10b981" size={16} /> : r.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={16} /> : null}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
+                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA' }}>
+                              <Text style={{ fontSize: 16 }}>{AVATAR_EMOJIS[getAvatarIndex(r.users?.full_name)]}</Text>
+                            </View>
+                            <Text style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 15 }}>{r.users?.full_name || 'Anonymous Diner'}</Text>
+                            {r.rating_thumbs === true ? <ThumbsUp color="#10b981" size={14} /> : r.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={14} /> : null}
                           </View>
-                          <Text style={{ color: '#444', fontSize: 14, lineHeight: 20 }}>{r.public_note}</Text>
-                          <Text style={{ color: '#888', fontSize: 11, marginTop: 6, fontWeight: '500' }}>{getRelativeTime(r.created_at)}</Text>
+                          <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
+                            <View style={{ flex: 1, minHeight: 80, justifyContent: 'space-between' }}>
+                              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 22 }}>{r.public_note}</Text>
+                              <Text style={{ color: '#6B7280', fontSize: 11, marginTop: 8, fontWeight: '600' }}>{getRelativeTime(r.created_at)}</Text>
+                            </View>
+                            
+                            {r.photo_url ? (
+                              <TouchableOpacity 
+                                style={{ 
+                                  position: 'relative',
+                                  width: 80, 
+                                  height: 80
+                                }} 
+                                onPress={() => setFullScreenImage(r.photo_url)}
+                              >
+                                {/* The "Stacked/Tilted" background layer */}
+                                <View style={{ 
+                                  position: 'absolute', 
+                                  top: -4, 
+                                  right: -4, 
+                                  width: 80, 
+                                  height: 80, 
+                                  borderRadius: 14, 
+                                  backgroundColor: '#E5E7EB', 
+                                  transform: [{ rotate: '5deg' }],
+                                  borderWidth: 1,
+                                  borderColor: '#DDD'
+                                }} />
+                                
+                                {/* The Main Image */}
+                                <View style={{ 
+                                  width: 80, 
+                                  height: 80, 
+                                  borderRadius: 14, 
+                                  overflow: 'hidden', 
+                                  backgroundColor: '#F3F4F6',
+                                  borderWidth: 1,
+                                  borderColor: '#EEE'
+                                }}>
+                                  <Image 
+                                    source={{ uri: r.photo_url }} 
+                                    style={{ width: '100%', height: '100%' }} 
+                                    resizeMode="cover"
+                                    blurRadius={2}
+                                  />
+                                  {/* Counter Overlay (e.g. if we had more than 1) */}
+                                  {/* For now we just show the zoom icon as requested earlier or a subtle indicator */}
+                                  <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, padding: 3 }}>
+                                    <Search color="#fff" size={10} />
+                                  </View>
+                                </View>
+                              </TouchableOpacity>
+                            ) : null}
+                          </View>
                         </View>
                       ))}
                       {itemReviews.length < reviewTotal && (
@@ -1020,34 +1125,32 @@ export default function App() {
               /* MENU LIST */
               <>
                 {/* RESTAURANT INFO BAR */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 16, gap: 8 }}>
-                  <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 6 }}>
+                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 10 }}>
+                  <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {priceRange && (
-                      <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                        <Text style={{ color: '#00A86B', fontSize: 12, fontWeight: '700' }}>{priceRange}</Text>
+                      <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+                        <Text style={{ color: '#00A86B', fontSize: 14, fontWeight: '800' }}>{priceRange}</Text>
                       </View>
                     )}
                     {selectedRestaurant.cuisine_type && (selectedRestaurant.cuisine_type as string).split(',').slice(0, 2).map((c: string) => c.trim()).filter(Boolean).map((c: string) => (
-                      <View key={c} style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                        <Text style={{ color: '#3B82F6', fontSize: 12, fontWeight: '600' }}>{c}</Text>
+                      <View key={c} style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+                        <Text style={{ color: '#3B82F6', fontSize: 14, fontWeight: '700' }}>{c}</Text>
                       </View>
                     ))}
                     {(() => {
                       const open = isOpenNow(selectedRestaurant.opening_hours);
                       if (open === null) return null;
                       return (
-                        <View style={{ backgroundColor: open ? '#F0FDF4' : '#FEF2F2', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                          <Text style={{ color: open ? '#00A86B' : '#EF4444', fontSize: 12, fontWeight: '700' }}>{open ? '● Open Now' : '● Closed'}</Text>
+                        <View style={{ backgroundColor: open ? '#F0FDF4' : '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
+                          <Text style={{ color: open ? '#00A86B' : '#EF4444', fontSize: 14, fontWeight: '800' }}>{open ? '● Open Now' : '● Closed'}</Text>
                         </View>
                       );
                     })()}
                   </View>
-                  <TouchableOpacity onPress={() => toggleFavourite(selectedRestaurant.id)} style={{ padding: 6 }}>
-                    <Heart color={favourites.includes(selectedRestaurant.id) ? '#EF4444' : '#AAA'} fill={favourites.includes(selectedRestaurant.id) ? '#EF4444' : 'none'} size={22} />
-                  </TouchableOpacity>
+
                 </View>
 
-                <Text style={styles.sectionTitle}>{currentTab === 'review' ? 'Select an item to review' : 'What are you having?'}</Text>
+                <Text style={[styles.sectionTitle, { fontSize: 24, fontWeight: '800', marginBottom: 20 }]}>{currentTab === 'review' ? 'Where are you eating to review?' : 'Where are you eating?'}</Text>
                 {menuLoading ? (
                   <ActivityIndicator size="large" color="#00A86B" style={{ marginTop: 40 }} />
                 ) : null}
@@ -1061,7 +1164,7 @@ export default function App() {
                   });
                   return Object.entries(grouped).map(([catName, catItems]) => (
                     <View key={catName}>
-                      <Text style={styles.categoryHeader}>{catName}</Text>
+                      <Text style={[styles.categoryHeader, { fontSize: 16, marginTop: 24, marginBottom: 16 }]}>{catName}</Text>
                       {catItems.map((item, i) => {
                         const globalIdx = menuItems.indexOf(item);
                         const score = getScoreBadge(item.id);
@@ -1084,14 +1187,14 @@ export default function App() {
                                 )}
                               </View>
                               <View style={{ alignItems: 'center', justifyContent: 'space-between', paddingRight: 12, paddingVertical: 12, gap: 10 }}>
-                                <TouchableOpacity onPress={() => toggleLikedItem(item.id)} hitSlop={{ top: 8, bottom: 8, left: 8, right: 8 }}>
+                                <TouchableOpacity onPress={() => toggleLikedItem(item.id)} hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}>
                                   <Heart
                                     color={likedItems.includes(item.id) ? '#EF4444' : '#D1D5DB'}
                                     fill={likedItems.includes(item.id) ? '#EF4444' : 'none'}
-                                    size={20}
+                                    size={24}
                                   />
                                 </TouchableOpacity>
-                                <ChevronRight color="#555" size={20} />
+                                <ChevronRight color="#888" size={24} />
                               </View>
                             </TouchableOpacity>
                           </Animated.View>
@@ -1287,8 +1390,21 @@ export default function App() {
                           <View style={{ flex: 1 }}>
                             <Text style={styles.diaryItemName}>{entry.menu_items?.name || 'Unknown Item'}</Text>
                           </View>
-                          {entry.rating_thumbs === true ? <ThumbsUp color="#10b981" size={18} /> :
-                            entry.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={18} /> : null}
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                            {(() => {
+                              const minsElapsed = (Date.now() - new Date(entry.created_at).getTime()) / 60000;
+                              if (minsElapsed <= 5) {
+                                return (
+                                  <TouchableOpacity onPress={() => openEditModal(entry)} style={{ padding: 4 }}>
+                                    <PenTool color="#00A86B" size={16} />
+                                  </TouchableOpacity>
+                                );
+                              }
+                              return null;
+                            })()}
+                            {entry.rating_thumbs === true ? <ThumbsUp color="#10b981" size={18} /> :
+                              entry.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={18} /> : null}
+                          </View>
                         </View>
                         <View style={styles.diaryDate}>
                           <Clock color="#666" size={13} style={{ marginRight: 4 }} />
@@ -1303,7 +1419,38 @@ export default function App() {
                         {entry.public_note ? (
                           <View style={styles.publicNoteContainer}>
                             <Text style={styles.noteLabel}>💬 Chef Message</Text>
-                            <Text style={styles.publicNoteText}>{entry.public_note}</Text>
+                            <View style={{ flexDirection: 'row', gap: 12 }}>
+                              <View style={{ flex: 1 }}>
+                                <Text style={styles.publicNoteText}>{entry.public_note}</Text>
+                              </View>
+                              {entry.photo_url ? (
+                                <TouchableOpacity 
+                                  style={{ 
+                                    position: 'relative',
+                                    width: 70, 
+                                    height: 70,
+                                  }} 
+                                  onPress={() => setFullScreenImage(entry.photo_url)}
+                                >
+                                  {/* Tilted Layer */}
+                                  <View style={{ 
+                                    position: 'absolute', 
+                                    top: -3, 
+                                    right: -3, 
+                                    width: 70, 
+                                    height: 70, 
+                                    borderRadius: 12, 
+                                    backgroundColor: '#D1FAE5', 
+                                    transform: [{ rotate: '5deg' }],
+                                    borderWidth: 1,
+                                    borderColor: '#A7F3D0'
+                                  }} />
+                                  <View style={{ width: 70, height: 70, borderRadius: 12, overflow: 'hidden', backgroundColor: '#fff', borderWidth: 1, borderColor: '#EAEAEA' }}>
+                                    <Image source={{ uri: entry.photo_url }} style={{ width: '100%', height: '100%' }} resizeMode="cover" />
+                                  </View>
+                                </TouchableOpacity>
+                              ) : null}
+                            </View>
                           </View>
                         ) : null}
                       </View>
@@ -1376,7 +1523,7 @@ export default function App() {
             <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
               <View>
                 <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
-                  {existingReviewId ? 'Editing Review' : 'Your Review'}
+                  {existingReviewId ? 'Editing Recent Review' : 'New Review'}
                 </Text>
                 <Text style={{ fontSize: 20, fontWeight: '800', color: '#111' }} numberOfLines={1}>{selectedItem.name}</Text>
               </View>
@@ -1558,51 +1705,120 @@ export default function App() {
 
       {/* SIDEBAR DRAWER */}
       {sidebarOpen && (
-        <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.35)', zIndex: 200 }} activeOpacity={1} onPress={closeSidebar}>
-          <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 280, backgroundColor: '#fff', zIndex: 201, transform: [{ translateX: sidebarAnim }], shadowColor: '#000', shadowOffset: { width: 4, height: 0 }, shadowOpacity: 0.12, shadowRadius: 16, elevation: 20 }}>
-            <View style={{ backgroundColor: '#00A86B', paddingTop: 60, paddingBottom: 24, paddingHorizontal: 24 }}>
-              <Text style={{ fontSize: 44 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
-              <Text style={{ color: '#fff', fontSize: 20, fontWeight: '900', marginTop: 10 }}>{profileUsername || 'BiteSync User'}</Text>
-              <Text style={{ color: 'rgba(255,255,255,0.7)', fontSize: 13, marginTop: 2 }}>{diaryEntries.length} bites tracked 🍽️</Text>
-              {reviewStreak > 0 && <Text style={{ color: 'rgba(255,255,255,0.9)', fontSize: 12, marginTop: 4 }}>🔥 {reviewStreak} day streak</Text>}
+        <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 200 }} activeOpacity={1} onPress={closeSidebar}>
+          <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 290, backgroundColor: '#FAFAFA', zIndex: 201, transform: [{ translateX: sidebarAnim }], shadowColor: '#000', shadowOffset: { width: 10, height: 0 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 25, borderTopRightRadius: 30, borderBottomRightRadius: 30, overflow: 'hidden' }}>
+            <View style={{ backgroundColor: '#00A86B', paddingTop: Platform.OS === 'web' ? 30 : 50, paddingBottom: 24, paddingHorizontal: 24, borderBottomLeftRadius: 30 }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
+                <Image source={require('./assets/logo.png')} style={{ width: 160, height: 48, borderRadius: 12 }} resizeMode="contain" />
+              </View>
+              <View style={{ flexDirection: 'row', alignItems: 'center' }}>
+                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}>
+                  <Text style={{ fontSize: 26 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
+                </View>
+                <View style={{ marginLeft: 14 }}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>{profileUsername || 'Foodie'}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2, fontWeight: '500' }}>{diaryEntries.length} bites tracked 🍽️</Text>
+                  {reviewStreak > 0 && <Text style={{ color: '#FCD34D', fontSize: 12, marginTop: 4, fontWeight: '700' }}>🔥 {reviewStreak} day streak</Text>}
+                </View>
+              </View>
             </View>
-            <View style={{ padding: 16, flex: 1 }}>
+            
+            <View style={{ padding: 20, flex: 1, backgroundColor: '#fff' }}>
               {[
-                { label: 'Home', emoji: '🏠', tab: 'home' as const },
-                { label: 'Review', emoji: '✍️', tab: 'review' as const },
-                { label: 'My Profile', emoji: '👤', tab: 'profile' as const },
-              ].map(({ label, emoji, tab }) => (
+                { label: 'Home', icon: Home, tab: 'home' as const },
+                { label: 'Review', icon: PenTool, tab: 'review' as const },
+                { label: 'My Profile', icon: User, tab: 'profile' as const },
+              ].map(({ label, icon: Icon, tab }) => (
                 <TouchableOpacity key={tab} onPress={() => navigateFromSidebar(tab)}
-                  style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 14, backgroundColor: currentTab === tab ? '#F0FDF4' : 'transparent', marginBottom: 4 }}>
-                  <Text style={{ fontSize: 20 }}>{emoji}</Text>
-                  <Text style={{ fontSize: 16, fontWeight: currentTab === tab ? '800' : '600', color: currentTab === tab ? '#00A86B' : '#333' }}>{label}</Text>
+                  style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, backgroundColor: currentTab === tab ? '#F0FDF4' : 'transparent', marginBottom: 8, borderWidth: currentTab === tab ? 1 : 0, borderColor: '#DCFCE7' }}>
+                  <Icon color={currentTab === tab ? '#00A86B' : '#666'} size={24} />
+                  <Text style={{ fontSize: 17, fontWeight: currentTab === tab ? '800' : '600', color: currentTab === tab ? '#00A86B' : '#444' }}>{label}</Text>
                 </TouchableOpacity>
               ))}
-              <View style={{ height: 1, backgroundColor: '#EAEAEA', marginVertical: 16 }} />
-              <TouchableOpacity onPress={closeSidebar} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 14 }}>
-                <Text style={{ fontSize: 20 }}>ℹ️</Text>
+              
+              <View style={{ height: 1, backgroundColor: '#F0F0F0', marginVertical: 20, marginHorizontal: 10 }} />
+              
+              <TouchableOpacity onPress={closeSidebar} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, marginBottom: 4 }}>
+                <Info color="#888" size={24} />
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>About Us</Text>
-                  <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }}>Built to capture every bite</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#444' }}>About Us</Text>
+                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>Built to capture every bite</Text>
                 </View>
               </TouchableOpacity>
-              <TouchableOpacity onPress={closeSidebar} style={{ flexDirection: 'row', alignItems: 'center', gap: 14, padding: 14, borderRadius: 14 }}>
-                <Text style={{ fontSize: 20 }}>💬</Text>
+              <TouchableOpacity onPress={closeSidebar} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16 }}>
+                <MessageCircle color="#888" size={24} />
                 <View>
-                  <Text style={{ fontSize: 16, fontWeight: '600', color: '#333' }}>Contact Support</Text>
-                  <Text style={{ fontSize: 11, color: '#888', marginTop: 1 }}>support@bitesync.app</Text>
+                  <Text style={{ fontSize: 16, fontWeight: '700', color: '#444' }}>Contact Support</Text>
+                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>support@bitesync.app</Text>
                 </View>
               </TouchableOpacity>
             </View>
-            <TouchableOpacity
-              onPress={() => { closeSidebar(); setTimeout(() => { supabase.auth.signOut(); setEmail(''); setPassword(''); setAuthError(''); setProfileUsername(''); setFavourites([]); setLikedItems([]); setLikedItemDetails([]); setTrendingDishes([]); setDiaryEntries([]); }, 300); }}
-              style={{ margin: 16, padding: 14, backgroundColor: '#FEF2F2', borderRadius: 14, flexDirection: 'row', alignItems: 'center', gap: 12, borderWidth: 1, borderColor: '#FECACA' }}>
-              <Text style={{ fontSize: 18 }}>🚪</Text>
-              <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 15 }}>Sign Out</Text>
-            </TouchableOpacity>
+
+            <View style={{ backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 40 }}>
+              <TouchableOpacity
+                onPress={() => { closeSidebar(); setTimeout(() => { supabase.auth.signOut(); setEmail(''); setPassword(''); setAuthError(''); setProfileUsername(''); setFavourites([]); setLikedItems([]); setLikedItemDetails([]); setTrendingDishes([]); setDiaryEntries([]); }, 300); }}
+                style={{ padding: 16, backgroundColor: '#FEF2F2', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: '#FECACA' }}>
+                <LogOut color="#DC2626" size={20} />
+                <Text style={{ color: '#DC2626', fontWeight: '800', fontSize: 16 }}>Sign Out</Text>
+              </TouchableOpacity>
+            </View>
           </Animated.View>
         </TouchableOpacity>
       )}
+      {/* FULL SCREEN IMAGE LIGHTBOX (Refined for 'Mid-Screen Window' feel) */}
+      <Modal visible={!!fullScreenImage} transparent={true} animationType="fade">
+        <TouchableOpacity 
+          style={{ flex: 1, backgroundColor: 'rgba(0,0,0,0.85)', justifyContent: 'center', alignItems: 'center', padding: 20 }} 
+          activeOpacity={1} 
+          onPress={() => setFullScreenImage(null)}
+        >
+          <View style={{ width: Platform.OS === 'web' ? '60%' : '90%', height: '70%', backgroundColor: '#000', borderRadius: 24, overflow: 'hidden', shadowColor: '#000', shadowOpacity: 0.5, shadowRadius: 20, elevation: 10 }}>
+            <TouchableOpacity 
+              style={{ position: 'absolute', top: 20, right: 20, zIndex: 10, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 20, padding: 8 }} 
+              onPress={() => setFullScreenImage(null)}
+            >
+              <X color="#fff" size={24} />
+            </TouchableOpacity>
+            {fullScreenImage && (
+              <Image 
+                source={{ uri: fullScreenImage }} 
+                style={{ width: '100%', height: '100%' }} 
+                resizeMode="contain" 
+              />
+            )}
+          </View>
+        </TouchableOpacity>
+      </Modal>
+
+      {/* SUCCESS TOAST */}
+      {showSuccess && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#00A86B', width: '70%', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, elevation: 10 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 32 }}>✅</Text>
+            </View>
+            <Text style={{ color: '#111', fontWeight: '900', fontSize: 20, marginBottom: 4 }}>Review Saved!</Text>
+            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>Your bite has been recorded in your food diary.</Text>
+          </View>
+        </View>
+      )}
+
+      {/* LIMIT REACHED TOAST */}
+      {showLimit && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#EF4444', width: '75%', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, elevation: 10 }}>
+            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+              <Text style={{ fontSize: 32 }}>🛑</Text>
+            </View>
+            <Text style={{ color: '#111', fontWeight: '900', fontSize: 20, marginBottom: 4 }}>Daily Limit Reached</Text>
+            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>You've posted 5 reviews today. {'\n'}Come back tomorrow for more!</Text>
+            <TouchableOpacity onPress={() => setShowLimit(false)} style={{ marginTop: 20, backgroundColor: '#EF4444', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
+              <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Got it!</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+
     </SafeAreaView>
   );
 }
@@ -1612,40 +1828,40 @@ const styles = StyleSheet.create({
   loadingContainer: { flex: 1, backgroundColor: '#F8F9FA', justifyContent: 'center', alignItems: 'center' },
 
   authContainer: { flex: 1, justifyContent: 'center', padding: 28 },
-  authTitle: { color: '#111', fontSize: 42, fontWeight: '900', textAlign: 'center', marginBottom: 8, letterSpacing: -1 },
-  authSubtitle: { color: '#666', fontSize: 16, textAlign: 'center', marginBottom: 40 },
+  authTitle: { color: '#1A1A1A', fontSize: 38, fontWeight: '800', textAlign: 'center', marginBottom: 8, letterSpacing: -0.5 },
+  authSubtitle: { color: '#4B5563', fontSize: 16, textAlign: 'center', marginBottom: 40 },
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
-  headerTitle: { color: '#00A86B', fontSize: 22, fontWeight: '900', letterSpacing: -0.5 },
+  headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '800' },
 
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
-  searchInput: { flex: 1, color: '#111', fontSize: 15 },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
+  searchInput: { flex: 1, color: '#1A1A1A', fontSize: 15 },
 
   scrollContent: { padding: 20, paddingBottom: 180 },
-  sectionTitle: { color: '#111', fontSize: 22, fontWeight: '800', marginBottom: 16 },
-  emptyText: { color: '#888', fontSize: 15, textAlign: 'center', marginTop: 60 },
-  categoryHeader: { color: '#00A86B', fontSize: 13, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 1, marginTop: 18, marginBottom: 10, paddingLeft: 2 },
+  sectionTitle: { color: '#1A1A1A', fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  emptyText: { color: '#6B7280', fontSize: 15, textAlign: 'center', marginTop: 60 },
+  categoryHeader: { color: '#00A86B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 18, marginBottom: 10, paddingLeft: 2 },
 
-  restaurantCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 18, borderRadius: 18, marginBottom: 14, borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 5, elevation: 2 },
-  restaurantIcon: { width: 48, height: 48, borderRadius: 14, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 14 },
+  restaurantCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 18, borderRadius: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' },
+  restaurantIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
 
-  menuCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 18, marginBottom: 14, borderWidth: 1, borderColor: '#EAEAEA', overflow: 'hidden', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.04, shadowRadius: 5, elevation: 2 },
-  menuImage: { width: 90, height: 90 },
-  menuInfo: { flex: 1, paddingHorizontal: 14, paddingVertical: 8 },
-  menuName: { color: '#111', fontSize: 16, fontWeight: '700', marginBottom: 4 },
-  menuPrice: { color: '#00A86B', fontWeight: '600', fontSize: 13 },
+  menuCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 20, marginBottom: 18, borderWidth: 1, borderColor: '#F3F4F6', overflow: 'hidden' },
+  menuImage: { width: 100, height: 100 },
+  menuInfo: { flex: 1, paddingHorizontal: 16, paddingVertical: 14 },
+  menuName: { color: '#1A1A1A', fontSize: 17, fontWeight: '700', marginBottom: 4 },
+  menuPrice: { color: '#00A86B', fontWeight: '700', fontSize: 15 },
   scoreBadge: { color: '#00A86B', fontSize: 12, fontWeight: '700', marginTop: 6 },
 
-  diaryCard: { backgroundColor: '#fff', padding: 16, borderRadius: 18, marginBottom: 14, borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.03, shadowRadius: 4, elevation: 1 },
+  diaryCard: { backgroundColor: '#fff', padding: 16, borderRadius: 18, marginBottom: 14, borderWidth: 1, borderColor: '#F3F4F6' },
   diaryHeader: { flexDirection: 'row', alignItems: 'center', marginBottom: 6 },
-  diaryItemName: { color: '#111', fontSize: 16, fontWeight: '700' },
+  diaryItemName: { color: '#1A1A1A', fontSize: 16, fontWeight: '700' },
   diaryDate: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  diaryDateText: { color: '#888', fontSize: 12, fontWeight: '500' },
+  diaryDateText: { color: '#6B7280', fontSize: 12, fontWeight: '600' },
   privateNoteContainer: { backgroundColor: '#F0FDF4', padding: 12, borderRadius: 10, marginBottom: 8, borderWidth: 1, borderColor: '#DCFCE7' },
-  publicNoteContainer: { backgroundColor: '#F8F9FA', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#EAEAEA' },
-  noteLabel: { color: '#666', fontSize: 11, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
+  publicNoteContainer: { backgroundColor: '#F9FAFB', padding: 12, borderRadius: 10, borderWidth: 1, borderColor: '#F3F4F6' },
+  noteLabel: { color: '#4B5563', fontSize: 11, fontWeight: '700', marginBottom: 4, textTransform: 'uppercase', letterSpacing: 0.5 },
   privateNoteText: { color: '#00A86B', fontSize: 14, lineHeight: 20 },
-  publicNoteText: { color: '#444', fontSize: 14, lineHeight: 20 },
+  publicNoteText: { color: '#374151', fontSize: 14, lineHeight: 22 },
 
   bottomNav: { flexDirection: 'row', position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EAEAEA', paddingVertical: 12, paddingBottom: 28, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 10 },
   navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },

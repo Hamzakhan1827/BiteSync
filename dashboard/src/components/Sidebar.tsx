@@ -36,49 +36,66 @@ export async function Sidebar() {
   }
 
   return (
-    <aside className="w-64 bg-white dark:bg-slate-900 border-r border-slate-200 dark:border-slate-800 hidden md:flex flex-col h-screen sticky top-0 transition-colors">
-      <div className="h-16 flex items-center px-6 border-b border-slate-200 dark:border-slate-800 shrink-0 transition-colors">
-        <Link href="/" className="flex items-center gap-2 text-indigo-600 dark:text-indigo-400 font-bold text-xl tracking-tight">
-          <Utensils className="w-6 h-6" />
-          <span>BiteSync</span>
-        </Link>
-      </div>
-      <div className="flex-1 p-4 overflow-y-auto">
-        <p className="text-xs font-semibold text-slate-400 dark:text-slate-500 uppercase tracking-wider mb-4 px-2">Main Menu</p>
-        <nav className="space-y-1">
-          <Link href="/" className="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md font-medium transition-colors">
-            <TrendingDown className="w-5 h-5" />
-            Overview
+    <>
+      {/* Spacer for layout so content doesn't get hidden behind the collapsed sidebar */}
+      <div className="w-16 hidden md:block shrink-0" />
+      
+      <aside className="fixed left-0 top-0 h-screen w-16 hover:w-64 group z-[100] hidden md:flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-slate-200/50 dark:border-slate-800/50 shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
+        
+        {/* Header / Logo */}
+        <div className="h-16 flex items-center px-4 shrink-0 border-b border-transparent group-hover:border-slate-200/50 dark:group-hover:border-slate-800/50 transition-colors">
+          <Link href="/" className="flex items-center gap-3 overflow-hidden whitespace-nowrap min-w-max">
+            <span className="bg-emerald-500 text-white w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-lg shadow-sm">
+              B
+            </span>
+            <span className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              BiteSync
+            </span>
           </Link>
-          <Link href="/feedback" className="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md font-medium transition-colors">
-            <Star className="w-5 h-5" />
-            Feedback Hub
-          </Link>
-          <Link href="/customers" className="flex items-center gap-3 px-3 py-2 text-slate-600 dark:text-slate-400 hover:bg-slate-50 dark:hover:bg-slate-800/50 hover:text-indigo-600 dark:hover:text-indigo-400 rounded-md font-medium transition-colors">
-            <Users className="w-5 h-5" />
-            Customers
-          </Link>
-        </nav>
-      </div>
-      <div className="px-4 py-3 shrink-0">
-        <form action={signOut}>
-          <button type="submit" className="w-full flex items-center gap-3 px-3 py-2 text-red-600 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-900/20 rounded-md font-medium transition-colors">
-            <LogOut className="w-5 h-5" />
-            Sign Out
-          </button>
-        </form>
-      </div>
-      <div className="p-4 border-t border-slate-200 dark:border-slate-800 shrink-0 transition-colors">
-        <div className="flex items-center gap-3">
-          <div className="w-8 h-8 rounded-full bg-indigo-100 dark:bg-indigo-900/50 flex items-center justify-center text-indigo-600 dark:text-indigo-400 font-bold">
-            {initial}
-          </div>
-          <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-slate-900 dark:text-slate-200 truncate" title={displayName}>{displayName}</p>
-            <p className="text-xs text-slate-500 dark:text-slate-400 truncate">{planName}</p>
+        </div>
+        {/* Main Navigation */}
+        <div className="flex-1 py-6 overflow-y-auto overflow-x-hidden no-scrollbar">
+          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+            Main Menu
+          </p>
+          <nav className="space-y-2 px-3">
+            <Link href="/" className="flex items-center gap-4 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl font-semibold transition-all w-[232px]">
+              <TrendingDown className="w-5 h-5 shrink-0" />
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Overview</span>
+            </Link>
+            <Link href="/feedback" className="flex items-center gap-4 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl font-semibold transition-all w-[232px]">
+              <Star className="w-5 h-5 shrink-0" />
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Feedback Hub</span>
+            </Link>
+            <Link href="/customers" className="flex items-center gap-4 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl font-semibold transition-all w-[232px]">
+              <Users className="w-5 h-5 shrink-0" />
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Customers</span>
+            </Link>
+          </nav>
+        </div>
+
+        {/* Bottom Actions */}
+        <div className="px-3 py-3 shrink-0">
+          <form action={signOut}>
+            <button type="submit" className="flex items-center gap-4 px-3 py-2.5 text-red-500 dark:text-red-400 hover:bg-red-50 dark:hover:bg-red-500/10 rounded-xl font-semibold transition-all w-[232px]">
+              <LogOut className="w-5 h-5 shrink-0" />
+              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Sign Out</span>
+            </button>
+          </form>
+        </div>
+        {/* User Profile */}
+        <div className="p-4 border-t border-transparent group-hover:border-slate-200/50 dark:group-hover:border-slate-800/50 shrink-0 transition-colors">
+          <div className="flex items-center gap-3 overflow-hidden min-w-max">
+            <div className="w-8 h-8 shrink-0 rounded-full bg-slate-100 dark:bg-slate-800 flex items-center justify-center text-slate-600 dark:text-slate-300 font-bold border border-slate-200 dark:border-slate-700">
+              {initial}
+            </div>
+            <div className="flex-1 min-w-0 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
+              <p className="text-sm font-bold text-slate-900 dark:text-slate-100 truncate" title={displayName}>{displayName}</p>
+              <p className="text-xs font-medium text-slate-500 dark:text-slate-400 truncate">{planName}</p>
+            </div>
           </div>
         </div>
-      </div>
-    </aside>
+      </aside>
+    </>
   )
 }

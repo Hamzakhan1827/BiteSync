@@ -1,6 +1,6 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { Header } from '@/components/Header'
-import { MessageSquare, ThumbsUp, ThumbsDown } from 'lucide-react'
+import { FeedbackManager } from '@/components/FeedbackManager'
 
 import { createClient } from '@/utils/supabase/server'
 
@@ -33,6 +33,7 @@ export default async function FeedbackPage() {
       id,
       rating_thumbs,
       public_note,
+      photo_url,
       created_at,
       menu_items!inner (
         name,
@@ -62,65 +63,7 @@ export default async function FeedbackPage() {
             </div>
           </div>
 
-          {reviews && reviews.length > 0 ? (
-            reviews.map((review: any) => (
-              <div key={review.id} className="bg-white dark:bg-slate-900 p-6 rounded-xl border border-slate-200 dark:border-slate-800 shadow-sm flex gap-4 transition-colors">
-                <div className="shrink-0 mt-1">
-                  {review.rating_thumbs ? (
-                    <div className="bg-emerald-50 dark:bg-emerald-900/20 p-3 rounded-full">
-                      <ThumbsUp className="w-6 h-6 text-emerald-500 dark:text-emerald-400" />
-                    </div>
-                  ) : review.rating_thumbs === false ? (
-                    <div className="bg-red-50 dark:bg-red-900/20 p-3 rounded-full">
-                      <ThumbsDown className="w-6 h-6 text-red-500 dark:text-red-400" />
-                    </div>
-                  ) : (
-                    <div className="bg-slate-50 dark:bg-slate-800 p-3 rounded-full">
-                      <MessageSquare className="w-6 h-6 text-slate-500 dark:text-slate-400" />
-                    </div>
-                  )}
-                </div>
-                
-                <div className="flex-1">
-                  <div className="flex justify-between items-start mb-2">
-                    <div>
-                      <h3 className="font-semibold text-slate-900 dark:text-slate-100 text-lg">
-                        {review.menu_items?.name || 'Unknown Item'}
-                      </h3>
-                      {/* Customer Intelligence: Render Email / Phone */}
-                      <div className="flex flex-col mt-1">
-                        <span className="text-sm font-medium text-indigo-600 dark:text-indigo-400">
-                          {review.users?.full_name || 'Anonymous Diner'}
-                        </span>
-                        {(review.users?.email || review.users?.phone_number) && (
-                          <span className="text-xs text-slate-500 dark:text-slate-400">
-                            {review.users?.email && `✉️ ${review.users.email} `}
-                            {review.users?.phone_number && `📞 ${review.users.phone_number}`}
-                          </span>
-                        )}
-                      </div>
-                    </div>
-                    <span className="text-xs text-slate-400 dark:text-slate-500 font-medium">
-                      {new Date(review.created_at).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}
-                    </span>
-                  </div>
-                  
-                  {review.public_note ? (
-                    <p className="text-slate-700 dark:text-slate-300 text-base leading-relaxed bg-slate-50 dark:bg-slate-800/50 p-4 rounded-lg border border-slate-100 dark:border-slate-700/50">
-                      "{review.public_note}"
-                    </p>
-                  ) : (
-                    <p className="text-slate-400 dark:text-slate-500 italic">No public note left by diner.</p>
-                  )}
-                </div>
-              </div>
-            ))
-          ) : (
-            <div className="text-center text-slate-500 py-12">
-              <MessageSquare className="w-12 h-12 text-slate-300 mx-auto mb-4" />
-              <p>No feedback yet. Tell your diners to start rating!</p>
-            </div>
-          )}
+          <FeedbackManager reviews={reviews || []} />
 
         </div>
       </main>
