@@ -14,13 +14,17 @@ export function Header({ title }: { title: string }) {
 
   return (
     <header className="h-16 bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-b border-slate-200/50 dark:border-slate-800/50 flex items-center justify-between px-8 sticky top-0 z-[90] transition-colors">
-      <div className="flex items-center gap-8">
-        <h1 className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 flex items-center gap-2">
-          <span className="bg-emerald-500 text-white w-8 h-8 rounded-lg flex items-center justify-center text-lg">B</span>
-          BiteSync
-        </h1>
-        
-        <nav className="hidden md:flex gap-1 ml-4 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
+      <div className="flex items-center gap-6">
+        <span
+          className="font-bold text-slate-900 dark:text-slate-200"
+          style={{ fontFamily: 'Inter, "Helvetica Neue", system-ui, sans-serif', fontSize: 24, letterSpacing: '-0.02em' }}
+        >
+          Bite<span style={{ color: '#10b981' }}>Sync</span>
+        </span>
+
+        <div className="w-px h-5 bg-slate-200 dark:bg-slate-700 shrink-0" />
+
+        <nav className="hidden md:flex gap-1 bg-slate-100 dark:bg-slate-800/50 p-1 rounded-lg">
           {navItems.map((item) => {
             const isActive = pathname === item.href;
             return (

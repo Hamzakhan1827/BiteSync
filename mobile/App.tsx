@@ -6,6 +6,7 @@ import {
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
 import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera, LogOut, Info, MessageCircle, PenTool } from 'lucide-react-native';
+import { BiteSyncLogo, BiteSyncMark } from './BiteSyncLogo';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -80,6 +81,7 @@ export default function App() {
   const [selectedRestaurant, setSelectedRestaurant] = useState<any>(null);
   const [restaurants, setRestaurants] = useState<any[]>([]);
   const [menuItems, setMenuItems] = useState<any[]>([]);
+  const [menuSearchQuery, setMenuSearchQuery] = useState('');
   const [diaryEntries, setDiaryEntries] = useState<any[]>([]);
   const [searchQuery, setSearchQuery] = useState('');
   const [diarySearchQuery, setDiarySearchQuery] = useState('');
@@ -767,7 +769,9 @@ export default function App() {
       <SafeAreaView style={styles.container}>
         <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
         <View style={styles.authContainer}>
-          <Text style={styles.authTitle}>BiteSync</Text>
+          <View style={{ alignSelf: 'center', marginBottom: 16 }}>
+            <BiteSyncLogo size={32} textColor="#0b1220" />
+          </View>
           <Text style={styles.authSubtitle}>Your personal food memory, every bite.</Text>
           {authError ? <Text style={{ color: '#ef4444', marginBottom: 8, fontSize: 13, fontWeight: '600', marginLeft: 4 }}>{authError}</Text> : null}
           {isSignUp && (
@@ -806,7 +810,7 @@ export default function App() {
         {(selectedRestaurant || (currentTab === 'home' && homeView === 'search')) ? (
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => {
             if (detailItem) { setDetailItem(null); setItemReviews([]); }
-            else if (selectedRestaurant) setSelectedRestaurant(null);
+            else if (selectedRestaurant) { setSelectedRestaurant(null); setMenuSearchQuery(''); }
             else setHomeView('landing');
           }}>
             <ArrowLeft color="#111" size={22} style={{ marginRight: 8 }} />
@@ -816,7 +820,9 @@ export default function App() {
           <>
             <TouchableOpacity onPress={openSidebar}><Menu color="#111" size={24} /></TouchableOpacity>
             <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); }}>
-              <Text style={[styles.headerTitle, { marginLeft: 8 }]}>BiteSync</Text>
+              <View style={{ marginLeft: 8 }}>
+                <BiteSyncLogo size={18} textColor="#111" />
+              </View>
             </TouchableOpacity>
             <TouchableOpacity onPress={() => setCurrentTab('profile')} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#00A86B' }}>
               <Text style={{ fontSize: 18 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
@@ -1151,13 +1157,36 @@ export default function App() {
                 </View>
 
                 <Text style={[styles.sectionTitle, { fontSize: 24, fontWeight: '800', marginBottom: 20 }]}>{currentTab === 'review' ? 'Where are you eating to review?' : 'Where are you eating?'}</Text>
+                {/* Menu search bar */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8, gap: 8 }}>
+                  <Search size={16} color="#9CA3AF" />
+                  <TextInput
+                    value={menuSearchQuery}
+                    onChangeText={setMenuSearchQuery}
+                    placeholder="Search menu..."
+                    placeholderTextColor="#9CA3AF"
+                    style={{ flex: 1, fontSize: 14, color: '#111', padding: 0 }}
+                  />
+                  {menuSearchQuery.length > 0 && (
+                    <TouchableOpacity onPress={() => setMenuSearchQuery('')}>
+                      <X size={14} color="#9CA3AF" />
+                    </TouchableOpacity>
+                  )}
+                </View>
+
                 {menuLoading ? (
                   <ActivityIndicator size="large" color="#00A86B" style={{ marginTop: 40 }} />
                 ) : null}
                 {!menuLoading && (() => {
-                  // Group by category
+                  // Group by category, filtered by search
+                  const filtered = menuSearchQuery.trim()
+                    ? menuItems.filter(item =>
+                        item.name?.toLowerCase().includes(menuSearchQuery.toLowerCase()) ||
+                        item.menu_categories?.name?.toLowerCase().includes(menuSearchQuery.toLowerCase())
+                      )
+                    : menuItems;
                   const grouped: Record<string, any[]> = {};
-                  menuItems.forEach(item => {
+                  filtered.forEach(item => {
                     const cat = item.menu_categories?.name || 'Menu';
                     if (!grouped[cat]) grouped[cat] = [];
                     grouped[cat].push(item);
@@ -1166,7 +1195,7 @@ export default function App() {
                     <View key={catName}>
                       <Text style={[styles.categoryHeader, { fontSize: 16, marginTop: 24, marginBottom: 16 }]}>{catName}</Text>
                       {catItems.map((item, i) => {
-                        const globalIdx = menuItems.indexOf(item);
+                        const globalIdx = filtered.indexOf(item);
                         const score = getScoreBadge(item.id);
                         const fadeAnim = fadeAnims.current[globalIdx] || new Animated.Value(1);
                         const slideAnim = slideAnims.current[globalIdx] || new Animated.Value(0);
@@ -1709,7 +1738,7 @@ export default function App() {
           <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 290, backgroundColor: '#FAFAFA', zIndex: 201, transform: [{ translateX: sidebarAnim }], shadowColor: '#000', shadowOffset: { width: 10, height: 0 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 25, borderTopRightRadius: 30, borderBottomRightRadius: 30, overflow: 'hidden' }}>
             <View style={{ backgroundColor: '#00A86B', paddingTop: Platform.OS === 'web' ? 30 : 50, paddingBottom: 24, paddingHorizontal: 24, borderBottomLeftRadius: 30 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-                <Image source={require('./assets/logo.png')} style={{ width: 160, height: 48, borderRadius: 12 }} resizeMode="contain" />
+                <BiteSyncLogo size={22} textColor="#ffffff" />
               </View>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
                 <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}>

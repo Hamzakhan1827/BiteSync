@@ -1,8 +1,8 @@
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { Header } from '@/components/Header'
 import { FeedbackManager } from '@/components/FeedbackManager'
-
 import { createClient } from '@/utils/supabase/server'
+import { Suspense } from 'react'
 
 export const revalidate = 0; // Disable cache so we always see live data
 
@@ -36,6 +36,7 @@ export default async function FeedbackPage() {
       photo_url,
       created_at,
       menu_items!inner (
+        id,
         name,
         menu_categories!inner (restaurant_id)
       ),
@@ -63,7 +64,9 @@ export default async function FeedbackPage() {
             </div>
           </div>
 
-          <FeedbackManager reviews={reviews || []} />
+          <Suspense>
+            <FeedbackManager reviews={reviews || []} />
+          </Suspense>
 
         </div>
       </main>

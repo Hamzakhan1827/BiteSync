@@ -1,9 +1,10 @@
 "use client";
 
 import { useState, useRef, useEffect } from "react";
-import { Plus, Edit2, Trash2, Image as ImageIcon, X, ChevronDown, Check } from "lucide-react";
+import { Plus, Edit2, Trash2, Image as ImageIcon, X, ChevronDown, Check, Search, BarChart2, ThumbsUp, ThumbsDown, MessageSquare, ArrowLeft } from "lucide-react";
 import { supabase } from "@/lib/supabase";
 import { ConfirmModal } from "./ConfirmModal";
+import { getItemStats } from "@/app/actions/menu";
 
 type MenuItem = {
   id: string;
@@ -32,6 +33,19 @@ export function MenuManager({ initialItems, categories: initialCategories, resta
   const [itemToDelete, setItemToDelete] = useState<string | null>(null);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  const [detailItem, setDetailItem] = useState<MenuItem | null>(null);
+  const [itemStats, setItemStats] = useState<Awaited<ReturnType<typeof getItemStats>> | null>(null);
+  const [statsLoading, setStatsLoading] = useState(false);
+
+  const openDetail = async (item: MenuItem) => {
+    setDetailItem(item);
+    setItemStats(null);
+    setStatsLoading(true);
+    const stats = await getItemStats(item.id);
+    setItemStats(stats);
+    setStatsLoading(false);
+  };
+
   // Category State
   const [isCategoryDropdownOpen, setIsCategoryDropdownOpen] = useState(false);
   const [isCategoryModalOpen, setIsCategoryModalOpen] = useState(false);
@@ -40,6 +54,7 @@ export function MenuManager({ initialItems, categories: initialCategories, resta
   const [formError, setFormError] = useState<string | null>(null);
   const [categoryError, setCategoryError] = useState<string | null>(null);
   
+  const [searchQuery, setSearchQuery] = useState("");
   const dropdownRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -219,22 +234,48 @@ export function MenuManager({ initialItems, categories: initialCategories, resta
     }
   };
 
+  const filteredItems = searchQuery.trim()
+    ? items.filter(item =>
+        item.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.menu_categories?.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
+        item.description?.toLowerCase().includes(searchQuery.toLowerCase())
+      )
+    : items;
+
   return <div className="bg-white dark:bg-slate-900 rounded-2xl shadow-sm border border-slate-200 dark:border-slate-800">
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 rounded-t-2xl">
+        <div className="flex flex-col gap-3 p-6 border-b border-slate-200 dark:border-slate-800 bg-slate-50/50 dark:bg-slate-800/20 rounded-t-2xl">
           <div>
             <h2 className="text-xl font-bold text-slate-900 dark:text-slate-100">{restaurantName ? `${restaurantName} Menu` : "Menu Catalog"}</h2>
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Manage your dishes, prices, and high-quality images.</p>
           </div>
-        <button 
-          onClick={() => openEditor()}
-          className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2 rounded-lg font-semibold flex items-center gap-2 transition-colors"
-        >
-          <Plus className="w-4 h-4" /> Add Item
-        </button>
+          <div className="flex items-center gap-3">
+            <div className="relative flex-1">
+              <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
+              <input
+                type="text"
+                value={searchQuery}
+                onChange={e => setSearchQuery(e.target.value)}
+                placeholder="Search items..."
+                className="w-full pl-9 pr-3 py-2.5 text-sm border border-slate-200 dark:border-slate-700 rounded-lg bg-white dark:bg-slate-800 text-slate-900 dark:text-slate-100 placeholder:text-slate-400 focus:outline-none focus:ring-2 focus:ring-emerald-500/50"
+              />
+            </div>
+            <button
+              onClick={() => openEditor()}
+              className="bg-emerald-500 hover:bg-emerald-600 text-white px-4 py-2.5 rounded-lg font-semibold flex items-center gap-2 transition-colors whitespace-nowrap"
+            >
+              <Plus className="w-4 h-4" /> Add Item
+            </button>
+          </div>
       </div>
 
       <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6 p-6">
-        {items.map(item => (
+        {filteredItems.length === 0 && (
+          <div className="col-span-full flex flex-col items-center justify-center py-16 text-slate-400">
+            <Search className="w-8 h-8 mb-3 opacity-40" />
+            <p className="text-sm font-medium">No items match &quot;{searchQuery}&quot;</p>
+          </div>
+        )}
+        {filteredItems.map(item => (
           <div key={item.id} className="border border-slate-200 dark:border-slate-800 rounded-xl overflow-hidden hover:shadow-md transition-shadow bg-white dark:bg-slate-900">
             {item.image_url ? (
               <img src={item.image_url} alt={item.name} className="w-full h-48 object-cover bg-slate-100 dark:bg-slate-800" />
@@ -250,9 +291,14 @@ export function MenuManager({ initialItems, categories: initialCategories, resta
               </div>
               <p className="text-xs font-medium text-slate-500 dark:text-slate-400 mb-3 uppercase tracking-wider">{item.menu_categories?.name}</p>
               <p className="text-sm text-slate-600 dark:text-slate-300 line-clamp-2 mb-4 h-10">{item.description || "No description provided."}</p>
-              <div className="flex justify-end gap-2 border-t border-slate-100 dark:border-slate-800 pt-3">
-                <button onClick={() => openEditor(item)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
-                <button onClick={() => setItemToDelete(item.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+              <div className="flex justify-between items-center border-t border-slate-100 dark:border-slate-800 pt-3">
+                <button onClick={() => openDetail(item)} className="flex items-center gap-1.5 text-xs font-semibold text-slate-400 hover:text-emerald-600 dark:hover:text-emerald-400 transition-colors px-1">
+                  <BarChart2 className="w-3.5 h-3.5" /> View Stats
+                </button>
+                <div className="flex gap-1">
+                  <button onClick={() => openEditor(item)} className="p-2 text-slate-400 hover:text-indigo-600 transition-colors"><Edit2 className="w-4 h-4" /></button>
+                  <button onClick={() => setItemToDelete(item.id)} className="p-2 text-slate-400 hover:text-red-600 transition-colors"><Trash2 className="w-4 h-4" /></button>
+                </div>
               </div>
             </div>
           </div>
@@ -396,7 +442,122 @@ export function MenuManager({ initialItems, categories: initialCategories, resta
         </div>
       )}
 
-      <ConfirmModal 
+      {/* Item Detail Panel */}
+      {detailItem && (
+        <>
+          <div className="fixed inset-0 z-40 bg-black/40 backdrop-blur-sm animate-in fade-in duration-200" onClick={() => setDetailItem(null)} />
+          <div className="fixed right-0 top-0 h-full w-full max-w-lg z-50 bg-white dark:bg-slate-900 shadow-2xl border-l border-slate-200 dark:border-slate-800 flex flex-col animate-in slide-in-from-right duration-300">
+
+            {/* Header */}
+            <div className="flex items-center justify-between px-6 py-4 border-b border-slate-200 dark:border-slate-800 shrink-0">
+              <button onClick={() => setDetailItem(null)} className="flex items-center gap-2 text-sm font-semibold text-slate-500 hover:text-slate-900 dark:hover:text-slate-100 transition-colors">
+                <ArrowLeft className="w-4 h-4" /> Back to Menu
+              </button>
+              <button onClick={() => { setDetailItem(null); openEditor(detailItem); }} className="flex items-center gap-1.5 text-sm font-semibold text-indigo-600 dark:text-indigo-400 hover:text-indigo-700 transition-colors">
+                <Edit2 className="w-3.5 h-3.5" /> Edit Item
+              </button>
+            </div>
+
+            <div className="flex-1 overflow-y-auto [&::-webkit-scrollbar]:hidden">
+              {/* Photo */}
+              {detailItem.image_url ? (
+                <img src={detailItem.image_url} alt={detailItem.name} className="w-full h-56 object-cover" />
+              ) : (
+                <div className="w-full h-56 bg-slate-100 dark:bg-slate-800 flex items-center justify-center">
+                  <ImageIcon className="w-10 h-10 text-slate-300 dark:text-slate-600" />
+                </div>
+              )}
+
+              <div className="p-6 space-y-6">
+                {/* Item info */}
+                <div>
+                  <div className="flex justify-between items-start">
+                    <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">{detailItem.name}</h2>
+                    <span className="text-lg font-bold text-emerald-600 dark:text-emerald-400">PKR {detailItem.price}</span>
+                  </div>
+                  <p className="text-xs font-bold text-slate-400 uppercase tracking-widest mt-1">{detailItem.menu_categories?.name}</p>
+                  {detailItem.description && (
+                    <p className="text-sm text-slate-600 dark:text-slate-300 mt-3 leading-relaxed">{detailItem.description}</p>
+                  )}
+                </div>
+
+                {/* Stats */}
+                <div>
+                  <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">Diner Feedback</p>
+                  {statsLoading ? (
+                    <div className="flex items-center justify-center py-10 text-slate-400">
+                      <div className="w-5 h-5 border-2 border-slate-300 border-t-emerald-500 rounded-full animate-spin" />
+                    </div>
+                  ) : !itemStats || itemStats.total === 0 ? (
+                    <div className="text-center py-8 bg-slate-50 dark:bg-slate-800/40 rounded-xl border border-slate-100 dark:border-slate-700">
+                      <MessageSquare className="w-8 h-8 text-slate-300 dark:text-slate-600 mx-auto mb-2" />
+                      <p className="text-sm text-slate-400">No reviews yet for this item.</p>
+                    </div>
+                  ) : (
+                    <>
+                      {/* Stat tiles */}
+                      <div className="grid grid-cols-3 gap-3 mb-4">
+                        <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 text-center">
+                          <p className="text-2xl font-black text-slate-900 dark:text-slate-100">{itemStats.total}</p>
+                          <p className="text-xs text-slate-400 font-semibold mt-1">Reviews</p>
+                        </div>
+                        <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 text-center">
+                          <p className="text-2xl font-black text-emerald-600 dark:text-emerald-400">{itemStats.positive}</p>
+                          <p className="text-xs text-emerald-500 font-semibold mt-1">Positive</p>
+                        </div>
+                        <div className="bg-red-50 dark:bg-red-900/20 rounded-xl p-4 text-center">
+                          <p className="text-2xl font-black text-red-500 dark:text-red-400">{itemStats.negative}</p>
+                          <p className="text-xs text-red-400 font-semibold mt-1">Negative</p>
+                        </div>
+                      </div>
+
+                      {/* Satisfaction bar */}
+                      {itemStats.satisfaction !== null && (
+                        <div className="mb-4">
+                          <div className="flex justify-between items-center mb-1.5">
+                            <span className="text-xs font-semibold text-slate-500">Satisfaction</span>
+                            <span className={`text-sm font-black ${itemStats.satisfaction >= 70 ? 'text-emerald-600 dark:text-emerald-400' : itemStats.satisfaction >= 40 ? 'text-amber-500' : 'text-red-500'}`}>
+                              {itemStats.satisfaction}%
+                            </span>
+                          </div>
+                          <div className="w-full h-2 bg-slate-100 dark:bg-slate-800 rounded-full overflow-hidden">
+                            <div
+                              className={`h-full rounded-full transition-all ${itemStats.satisfaction >= 70 ? 'bg-emerald-500' : itemStats.satisfaction >= 40 ? 'bg-amber-400' : 'bg-red-500'}`}
+                              style={{ width: `${itemStats.satisfaction}%` }}
+                            />
+                          </div>
+                        </div>
+                      )}
+
+                      {/* Recent notes */}
+                      {itemStats.recentNotes.length > 0 && (
+                        <div className="space-y-3">
+                          <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500">Recent Comments</p>
+                          {itemStats.recentNotes.map((n, i) => (
+                            <div key={i} className="bg-slate-50 dark:bg-slate-800/40 rounded-xl p-4 border border-slate-100 dark:border-slate-700/50">
+                              <div className="flex items-center justify-between mb-2">
+                                <span className="text-xs font-bold text-slate-600 dark:text-slate-300">{n.name}</span>
+                                {n.rating === true
+                                  ? <ThumbsUp className="w-3.5 h-3.5 text-emerald-500" />
+                                  : n.rating === false
+                                  ? <ThumbsDown className="w-3.5 h-3.5 text-red-400" />
+                                  : null}
+                              </div>
+                              <p className="text-sm text-slate-600 dark:text-slate-300 italic">"{n.note}"</p>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </>
+                  )}
+                </div>
+              </div>
+            </div>
+          </div>
+        </>
+      )}
+
+      <ConfirmModal
         isOpen={!!itemToDelete}
         title="Delete Menu Item"
         message="Are you sure you want to permanently delete this menu item? This action cannot be undone."

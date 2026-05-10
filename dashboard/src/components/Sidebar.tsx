@@ -1,5 +1,7 @@
 import Link from 'next/link'
-import { Utensils, Star, TrendingDown, Users, LogOut } from 'lucide-react'
+import { LogOut } from 'lucide-react'
+import { BiteSyncMark } from './BiteSyncLogo'
+import { SidebarNav } from './SidebarNav'
 import { createClient } from '@/utils/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { signOut } from '@/app/actions/auth'
@@ -40,38 +42,23 @@ export async function Sidebar() {
       {/* Spacer for layout so content doesn't get hidden behind the collapsed sidebar */}
       <div className="w-16 hidden md:block shrink-0" />
       
-      <aside className="fixed left-0 top-0 h-screen w-16 hover:w-64 group z-[100] hidden md:flex flex-col bg-white/60 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-slate-200/50 dark:border-slate-800/50 shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
+      <aside className="fixed left-0 top-0 h-screen w-16 hover:w-64 group z-[100] hidden md:flex flex-col bg-white/95 dark:bg-slate-900/60 backdrop-blur-2xl border-r border-slate-200 dark:border-slate-800/50 shadow-[0_0_40px_-15px_rgba(0,0,0,0.1)] transition-all duration-400 ease-[cubic-bezier(0.16,1,0.3,1)] overflow-hidden">
         
-        {/* Header / Logo */}
-        <div className="h-16 flex items-center px-4 shrink-0 border-b border-transparent group-hover:border-slate-200/50 dark:group-hover:border-slate-800/50 transition-colors">
-          <Link href="/" className="flex items-center gap-3 overflow-hidden whitespace-nowrap min-w-max">
-            <span className="bg-emerald-500 text-white w-8 h-8 shrink-0 rounded-lg flex items-center justify-center font-black text-lg shadow-sm">
-              B
-            </span>
-            <span className="text-xl font-black tracking-tight text-slate-900 dark:text-slate-100 opacity-0 group-hover:opacity-100 transition-opacity duration-300">
-              BiteSync
+        {/* Logo area — mark stays fixed at left, text slides in beside it */}
+        <div className="h-16 flex items-center shrink-0 border-b border-slate-200/50 dark:border-slate-800/50 pl-[17px]">
+          <Link href="/" className="flex items-center gap-[10px] min-w-max">
+            <BiteSyncMark size={30} className="shrink-0" />
+            <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 whitespace-nowrap font-bold tracking-tight text-slate-900 dark:text-slate-200" style={{ fontSize: 24, letterSpacing: '-0.02em' }}>
+              Bite<span className="text-emerald-500 dark:text-emerald-400">Sync</span>
             </span>
           </Link>
         </div>
         {/* Main Navigation */}
         <div className="flex-1 py-6 overflow-y-auto overflow-x-hidden no-scrollbar">
-          <p className="text-[10px] font-bold text-slate-400 dark:text-slate-500 uppercase tracking-widest mb-4 px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
+          <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-4 px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
             Main Menu
           </p>
-          <nav className="space-y-2 px-3">
-            <Link href="/" className="flex items-center gap-4 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl font-semibold transition-all w-[232px]">
-              <TrendingDown className="w-5 h-5 shrink-0" />
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Overview</span>
-            </Link>
-            <Link href="/feedback" className="flex items-center gap-4 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl font-semibold transition-all w-[232px]">
-              <Star className="w-5 h-5 shrink-0" />
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Feedback Hub</span>
-            </Link>
-            <Link href="/customers" className="flex items-center gap-4 px-3 py-2.5 text-slate-600 dark:text-slate-400 hover:bg-emerald-50 dark:hover:bg-emerald-500/10 hover:text-emerald-600 dark:hover:text-emerald-400 rounded-xl font-semibold transition-all w-[232px]">
-              <Users className="w-5 h-5 shrink-0" />
-              <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">Customers</span>
-            </Link>
-          </nav>
+          <SidebarNav />
         </div>
 
         {/* Bottom Actions */}
