@@ -1,8 +1,9 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView,
-  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal
+  StyleSheet, Text, View, ScrollView, TouchableOpacity,
+  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, RefreshControl, Modal
 } from 'react-native';
+import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
 import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera, LogOut, Info, MessageCircle, PenTool } from 'lucide-react-native';
@@ -790,7 +791,8 @@ export default function App() {
       setOnboardingDone(true);
     };
     return (
-      <SafeAreaView style={[styles.container, { justifyContent: 'space-between' }]}>
+      <SafeAreaProvider>
+      <SafeAreaView style={[styles.container, { justifyContent: 'space-between' }]} edges={['top', 'left', 'right']}>
         <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
           <Text style={{ fontSize: 88, marginBottom: 28 }}>{slide.emoji}</Text>
@@ -813,6 +815,7 @@ export default function App() {
           )}
         </View>
       </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
@@ -834,7 +837,8 @@ export default function App() {
   // --- AUTH SCREEN ---
   if (!session) {
     return (
-      <SafeAreaView style={styles.container}>
+      <SafeAreaProvider>
+      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
         <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
         <View style={styles.authContainer}>
           <View style={{ alignSelf: 'center', marginBottom: 16 }}>
@@ -866,12 +870,14 @@ export default function App() {
           </TouchableOpacity>
         </View>
       </SafeAreaView>
+      </SafeAreaProvider>
     );
   }
 
   // --- MAIN APP ---
   return (
-    <SafeAreaView style={styles.container}>
+    <SafeAreaProvider>
+    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
       <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
       {/* HEADER */}
       <View style={styles.header}>
@@ -1917,11 +1923,12 @@ export default function App() {
       )}
 
     </SafeAreaView>
+    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   loadingContainer: { flex: 1, backgroundColor: '#F8F9FA', justifyContent: 'center', alignItems: 'center' },
 
   authContainer: { flex: 1, justifyContent: 'center', padding: 28 },
