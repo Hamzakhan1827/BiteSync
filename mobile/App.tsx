@@ -248,7 +248,23 @@ export default function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      // When a refresh token is invalid/expired, Supabase emits SIGNED_OUT.
+      // Clear any stale AsyncStorage session so the user lands on the login screen.
+      if (event === 'TOKEN_REFRESHED' && !session) {
+        supabase.auth.signOut();
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setDiaryEntries([]);
+        setRestaurants([]);
+        setFavourites([]);
+        setLikedItems([]);
+        setLikedItemDetails([]);
+        setTrendingDishes([]);
+        return;
+      }
       setSession(session);
       if (session) {
         fetchRestaurants();
@@ -923,7 +939,7 @@ export default function App() {
                 <Text style={styles.sectionTitle}>❤️ Your Favourite Dishes</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20, marginBottom: 28 }}>
                   {likedItemDetails.map(dish => (
-                    <TouchableOpacity key={'liked-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#FECDD3', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 }}
+                    <TouchableOpacity key={'liked-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#DCFCE7', shadowColor: '#00A86B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 6, elevation: 3 }}
                       onPress={() => handleDishSearchSelect(dish)}>
                       <View style={{ position: 'relative' }}>
                         <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
@@ -954,11 +970,16 @@ export default function App() {
               <>
                 <Text style={styles.sectionTitle}>🔥 Trending Dishes</Text>
                 <Text style={{ color: '#666', fontSize: 14, marginBottom: 16, marginTop: -10 }}>Top-rated bites everyone is ordering</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20, marginBottom: 28 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginHorizontal: -20, marginBottom: 28 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}
+                >
                   {trendingDishes.map(dish => (
-                    <TouchableOpacity key={'td-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 3 }}
+                    <TouchableOpacity key={'td-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 4 }}
                       onPress={() => handleDishSearchSelect(dish)}>
-                      <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
+                      <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100, borderTopLeftRadius: 16, borderTopRightRadius: 16 }} resizeMode="cover" />
                       <View style={{ padding: 10 }}>
                         <Text style={{ color: '#111', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{dish.name}</Text>
                         <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>at {dish.menu_categories?.restaurants?.name || 'Restaurant'}</Text>
@@ -1921,7 +1942,7 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight : 0 },
+  container: { flex: 1, backgroundColor: '#F8F9FA' },
   loadingContainer: { flex: 1, backgroundColor: '#F8F9FA', justifyContent: 'center', alignItems: 'center' },
 
   authContainer: { flex: 1, justifyContent: 'center', padding: 28 },

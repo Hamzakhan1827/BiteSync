@@ -10,6 +10,16 @@ CREATE TABLE IF NOT EXISTS liked_items (
 
 ALTER TABLE liked_items ENABLE ROW LEVEL SECURITY;
 
+-- SELECT: users can read their own liked items
+CREATE POLICY "Users can view own liked items" ON liked_items
+  FOR SELECT USING (auth.uid() = user_id);
+
+-- INSERT / UPDATE / DELETE: users can manage their own
 CREATE POLICY "Users manage own liked items" ON liked_items
+  FOR ALL
   USING (auth.uid() = user_id)
   WITH CHECK (auth.uid() = user_id);
+
+-- Index for fast lookup
+CREATE INDEX IF NOT EXISTS idx_liked_items_user ON liked_items(user_id);
+CREATE INDEX IF NOT EXISTS idx_liked_items_item ON liked_items(menu_item_id);
