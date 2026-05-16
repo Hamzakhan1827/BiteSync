@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView,
-  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal
+  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal, Pressable
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
@@ -111,6 +111,7 @@ export default function App() {
   const [existingReviewCreatedAt, setExistingReviewCreatedAt] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [limitMsg, setLimitMsg] = useState({ title: 'Daily Limit Reached', body: "You've posted 5 reviews today.\nCome back tomorrow for more!" });
   const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [reviewStats, setReviewStats] = useState<Record<string, { up: number; total: number }>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -125,6 +126,7 @@ export default function App() {
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarAnim = useRef(new Animated.Value(-300)).current;
+  const mainScrollRef = useRef<ScrollView>(null);
 
   // --- NEW STATE (13 changes) ---
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
@@ -226,7 +228,10 @@ export default function App() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.user_metadata?.username) setProfileUsername(user.user_metadata.username);
-      if (typeof user?.user_metadata?.avatar_index === 'number') setProfileAvatar(user.user_metadata.avatar_index);
+      if (typeof user?.user_metadata?.avatar_index === 'number') {
+        setProfileAvatar(user.user_metadata.avatar_index);
+        await supabase.from('users').update({ avatar_url: user.user_metadata.avatar_index.toString() }).eq('id', user.id);
+      }
       if (user?.user_metadata?.username_last_changed) setUsernameLastChanged(new Date(user.user_metadata.username_last_changed));
     } catch (err) { console.error(err); }
   };
@@ -699,18 +704,23 @@ export default function App() {
         
         const [totalRes, itemRes] = await Promise.all([
           supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).gte('created_at', todayStart),
-          supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('menu_item_id', selectedItem.id)
+          supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('menu_item_id', selectedItem.id).gte('created_at', todayStart)
         ]);
 
         const totalToday = totalRes.count ?? 0;
-        const itemTotal = itemRes.count ?? 0;
+        const itemToday = itemRes.count ?? 0;
 
-        if (totalToday >= 5 || itemTotal >= 2) {
+        if (itemToday >= 2) {
           setSubmitting(false);
+          setLimitMsg({ title: 'Already Reviewed Today', body: "You've reviewed this dish twice today.\nCome back tomorrow to review again!" });
           setShowLimit(true);
-          // Set a specific message if it was an item limit
-          const msg = itemTotal >= 2 ? "You've already reviewed this dish twice!" : "You've reached your 5 daily reviews limit.";
-          Alert.alert('Limit Reached', msg); // Using alert too for absolute clarity
+          setTimeout(() => setShowLimit(false), 4000);
+          return;
+        }
+        if (totalToday >= 5) {
+          setSubmitting(false);
+          setLimitMsg({ title: 'Daily Limit Reached', body: "You've posted 5 reviews today.\nCome back tomorrow for more!" });
+          setShowLimit(true);
           setTimeout(() => setShowLimit(false), 4000);
           return;
         }
@@ -772,7 +782,7 @@ export default function App() {
     try {
       const [countResult, dataResult] = await Promise.all([
         supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('menu_item_id', itemId).neq('public_note', ''),
-        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, users(full_name)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
+        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, user_id, users(full_name, avatar_url)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
       ]);
       setReviewTotal(countResult.count || 0);
       if (append) { setItemReviews(prev => [...prev, ...(dataResult.data || [])]); }
@@ -810,7 +820,7 @@ export default function App() {
         <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
           <Text style={{ fontSize: 88, marginBottom: 28 }}>{slide.emoji}</Text>
-          <Text style={{ color: '#111', fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 14, letterSpacing: -0.5 }}>{slide.title}</Text>
+          <Text style={{ color: '#111', fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 14, letterSpacing: -0.5 }}>{slide.title}</Text>
           <Text style={{ color: '#666', fontSize: 16, textAlign: 'center', lineHeight: 26 }}>{slide.desc}</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
@@ -916,6 +926,7 @@ export default function App() {
       </View>
 
       <ScrollView
+        ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         overScrollMode="never"
@@ -951,7 +962,7 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
                       <View style={{ padding: 10 }}>
-                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{dish.name}</Text>
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>{dish.name}</Text>
                         <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>at {dish.menu_categories?.restaurants?.name || 'Restaurant'}</Text>
                         <Text style={{ color: '#00A86B', fontSize: 12, fontWeight: '700', marginTop: 4 }}>PKR {dish.price}</Text>
                       </View>
@@ -981,7 +992,7 @@ export default function App() {
                       onPress={() => handleDishSearchSelect(dish)}>
                       <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100, borderTopLeftRadius: 16, borderTopRightRadius: 16 }} resizeMode="cover" />
                       <View style={{ padding: 10 }}>
-                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{dish.name}</Text>
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>{dish.name}</Text>
                         <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>at {dish.menu_categories?.restaurants?.name || 'Restaurant'}</Text>
                         <Text style={{ color: '#00A86B', fontSize: 12, fontWeight: '700', marginTop: 4 }}>PKR {dish.price}</Text>
                       </View>
@@ -1005,13 +1016,13 @@ export default function App() {
                       <Image source={{ uri: getRestaurantImage(rest) }} style={{ width: '100%', height: 130, borderRadius: 0 }} resizeMode="cover" />
                       {openStatus !== null && (
                         <View style={{ position: 'absolute', top: 10, left: 10, backgroundColor: openStatus ? '#00A86B' : '#EF4444', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{openStatus ? '● Open' : '● Closed'}</Text>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{openStatus ? '● Open' : '● Closed'}</Text>
                         </View>
                       )}
                     </View>
                     <View style={{ padding: 14, width: '100%' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <Text style={{ color: '#111', fontSize: 15, fontWeight: '800', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
+                        <Text style={{ color: '#111', fontSize: 15, fontWeight: '700', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
                         {rating && rating.total >= 3 ? (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                             <Text style={{ color: '#00A86B', fontSize: 11 }}>★</Text>
@@ -1051,14 +1062,14 @@ export default function App() {
                       <Image source={{ uri: getRestaurantImage(rest) }} style={{ width: '100%', height: 110 }} resizeMode="cover" />
                       {openStatus !== null && (
                         <View style={{ position: 'absolute', bottom: 6, left: 6, backgroundColor: openStatus ? '#00A86B' : '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{openStatus ? '● Open' : '● Closed'}</Text>
+                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{openStatus ? '● Open' : '● Closed'}</Text>
                         </View>
                       )}
                     </View>
                     <View style={{ padding: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '800', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
-                        {idx === 0 && <View style={{ backgroundColor: '#00A86B', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 }}><Text style={{ color: '#fff', fontSize: 8, fontWeight: '800' }}>AD</Text></View>}
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
+                        {idx === 0 && <View style={{ backgroundColor: '#00A86B', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 }}><Text style={{ color: '#fff', fontSize: 8, fontWeight: '700' }}>AD</Text></View>}
                       </View>
                       {tags.length > 0 && <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }} numberOfLines={1}>{tags.slice(0, 2).join(' · ')}</Text>}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1107,7 +1118,7 @@ export default function App() {
                         <View style={{ backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                           <Text style={{ fontSize: 32 }}>🔥</Text>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#00A86B', fontWeight: '900', fontSize: 20 }}>{score.pct}%</Text>
+                            <Text style={{ color: '#00A86B', fontWeight: '800', fontSize: 20 }}>{score.pct}%</Text>
                             <Text style={{ color: '#16a34a', fontWeight: '600', fontSize: 13 }}>would order this again</Text>
                             <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Based on {score.total} votes</Text>
                           </View>
@@ -1116,7 +1127,7 @@ export default function App() {
                         <View style={{ backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                           <Text style={{ fontSize: 28 }}>✨</Text>
                           <View>
-                            <Text style={{ color: '#00A86B', fontWeight: '800', fontSize: 15 }}>Be the first to review!</Text>
+                            <Text style={{ color: '#00A86B', fontWeight: '700', fontSize: 15 }}>Be the first to review!</Text>
                             <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Your vote shapes what others order</Text>
                           </View>
                         </View>
@@ -1140,8 +1151,8 @@ export default function App() {
                       {itemReviews.map((r: any, idx: number) => (
                         <View key={r.id} style={{ padding: 14, borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAEAEA' }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA' }}>
-                              <Text style={{ fontSize: 16 }}>{AVATAR_EMOJIS[getAvatarIndex(r.users?.full_name)]}</Text>
+                            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#DCFCE7' }}>
+                              <Text style={{ fontSize: 17 }}>{AVATAR_EMOJIS[r.users?.avatar_url && !isNaN(parseInt(r.users.avatar_url)) ? parseInt(r.users.avatar_url) : getAvatarIndex(r.users?.full_name)]}</Text>
                             </View>
                             <Text style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 15 }}>{r.users?.full_name || 'Anonymous Diner'}</Text>
                             {r.rating_thumbs === true ? <ThumbsUp color="#10b981" size={14} /> : r.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={14} /> : null}
@@ -1154,45 +1165,16 @@ export default function App() {
                             
                             {r.photo_url ? (
                               <TouchableOpacity 
-                                style={{ 
-                                  position: 'relative',
-                                  width: 80, 
-                                  height: 80
-                                }} 
+                                style={{ alignSelf: 'center', width: 80, height: 80 }} 
                                 onPress={() => setFullScreenImage(r.photo_url)}
                               >
-                                {/* The "Stacked/Tilted" background layer */}
-                                <View style={{ 
-                                  position: 'absolute', 
-                                  top: -4, 
-                                  right: -4, 
-                                  width: 80, 
-                                  height: 80, 
-                                  borderRadius: 14, 
-                                  backgroundColor: '#E5E7EB', 
-                                  transform: [{ rotate: '5deg' }],
-                                  borderWidth: 1,
-                                  borderColor: '#DDD'
-                                }} />
-                                
-                                {/* The Main Image */}
-                                <View style={{ 
-                                  width: 80, 
-                                  height: 80, 
-                                  borderRadius: 14, 
-                                  overflow: 'hidden', 
-                                  backgroundColor: '#F3F4F6',
-                                  borderWidth: 1,
-                                  borderColor: '#EEE'
-                                }}>
+                                <View style={{ width: 80, height: 80, borderRadius: 14, overflow: 'hidden', backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#EEE' }}>
                                   <Image 
                                     source={{ uri: r.photo_url }} 
                                     style={{ width: '100%', height: '100%' }} 
                                     resizeMode="cover"
                                     blurRadius={2}
                                   />
-                                  {/* Counter Overlay (e.g. if we had more than 1) */}
-                                  {/* For now we just show the zoom icon as requested earlier or a subtle indicator */}
                                   <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, padding: 3 }}>
                                     <Search color="#fff" size={10} />
                                   </View>
@@ -1224,7 +1206,7 @@ export default function App() {
                   <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
                     {priceRange && (
                       <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
-                        <Text style={{ color: '#00A86B', fontSize: 14, fontWeight: '800' }}>{priceRange}</Text>
+                        <Text style={{ color: '#00A86B', fontSize: 14, fontWeight: '700' }}>{priceRange}</Text>
                       </View>
                     )}
                     {selectedRestaurant.cuisine_type && (selectedRestaurant.cuisine_type as string).split(',').slice(0, 2).map((c: string) => c.trim()).filter(Boolean).map((c: string) => (
@@ -1237,7 +1219,7 @@ export default function App() {
                       if (open === null) return null;
                       return (
                         <View style={{ backgroundColor: open ? '#F0FDF4' : '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
-                          <Text style={{ color: open ? '#00A86B' : '#EF4444', fontSize: 14, fontWeight: '800' }}>{open ? '● Open Now' : '● Closed'}</Text>
+                          <Text style={{ color: open ? '#00A86B' : '#EF4444', fontSize: 14, fontWeight: '700' }}>{open ? '● Open Now' : '● Closed'}</Text>
                         </View>
                       );
                     })()}
@@ -1245,7 +1227,7 @@ export default function App() {
 
                 </View>
 
-                <Text style={[styles.sectionTitle, { fontSize: 24, fontWeight: '800', marginBottom: 20 }]}>{currentTab === 'review' ? 'Where are you eating to review?' : 'Where are you eating?'}</Text>
+                <Text style={[styles.sectionTitle, { fontSize: 24, fontWeight: '700', marginBottom: 20 }]}>{currentTab === 'review' ? 'Where are you eating to review?' : 'Where are you eating?'}</Text>
                 {/* Menu search bar */}
                 <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8, gap: 8 }}>
                   <Search size={16} color="#9CA3AF" />
@@ -1299,7 +1281,7 @@ export default function App() {
                                 {reviewStats[item.id]?.total >= 5 && (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                                     <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                                      <Text style={{ color: '#DC2626', fontSize: 10, fontWeight: '800' }}>🔥 Popular</Text>
+                                      <Text style={{ color: '#DC2626', fontSize: 10, fontWeight: '700' }}>🔥 Popular</Text>
                                     </View>
                                   </View>
                                 )}
@@ -1364,9 +1346,6 @@ export default function App() {
                           )}
                         </View>
                       </View>
-                      <TouchableOpacity onPress={() => toggleFavourite(rest.id)} style={{ padding: 10 }}>
-                        <Heart color={favourites.includes(rest.id) ? '#EF4444' : '#CCC'} fill={favourites.includes(rest.id) ? '#EF4444' : 'none'} size={18} />
-                      </TouchableOpacity>
                       <ChevronRight color="#555" size={22} style={{ marginRight: 4 }} />
                     </TouchableOpacity>
                   );
@@ -1395,7 +1374,7 @@ export default function App() {
 
         ) : currentTab === 'profile' ? (
           /* ---- PROFILE & DIARY ---- */
-          <>
+          <Pressable onPress={() => { if (showAvatarPicker) setShowAvatarPicker(false); }} style={{ flex: 1 }}>
             <View style={{ alignItems: 'center', marginBottom: 24, marginTop: 10 }}>
               <TouchableOpacity onPress={() => setShowAvatarPicker(!showAvatarPicker)} style={{ position: 'relative' }}>
                 <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#00A86B', marginBottom: 6 }}>
@@ -1410,7 +1389,7 @@ export default function App() {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 12, backgroundColor: '#fff', padding: 16, borderRadius: 18, borderWidth: 1, borderColor: '#EAEAEA', width: '100%' }}>
                   <Text style={{ width: '100%', textAlign: 'center', color: '#666', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>Choose your avatar</Text>
                   {AVATAR_EMOJIS.map((emoji, idx) => (
-                    <TouchableOpacity key={idx} onPress={async () => { setProfileAvatar(idx); setShowAvatarPicker(false); await supabase.auth.updateUser({ data: { avatar_index: idx } }); }}
+                    <TouchableOpacity key={idx} onPress={async () => { setProfileAvatar(idx); setShowAvatarPicker(false); await supabase.auth.updateUser({ data: { avatar_index: idx } }); await supabase.from('users').update({ avatar_url: idx.toString() }).eq('id', session?.user?.id); }}
                       style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: profileAvatar === idx ? '#F0FDF4' : '#F8F9FA', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: profileAvatar === idx ? '#00A86B' : '#EAEAEA' }}>
                       <Text style={{ fontSize: 28 }}>{emoji}</Text>
                     </TouchableOpacity>
@@ -1420,7 +1399,7 @@ export default function App() {
 
               {!editingUsername ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                  <Text style={{ color: '#111', fontSize: 20, fontWeight: '900' }}>{profileUsername || 'Set a username'}</Text>
+                  <Text style={{ color: '#111', fontSize: 20, fontWeight: '800' }}>{profileUsername || 'Set a username'}</Text>
                   <TouchableOpacity onPress={() => {
                     if (!canEditUsername()) { Alert.alert('Too Soon', 'You can only change your username once every 30 days.'); return; }
                     setNewUsername(profileUsername); setEditingUsername(true);
@@ -1444,7 +1423,7 @@ export default function App() {
               {reviewStreak > 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: '#FFF7ED', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#FED7AA', gap: 6 }}>
                   <Text style={{ fontSize: 16 }}>🔥</Text>
-                  <Text style={{ color: '#EA580C', fontWeight: '800', fontSize: 14 }}>{reviewStreak} day streak!</Text>
+                  <Text style={{ color: '#EA580C', fontWeight: '700', fontSize: 14 }}>{reviewStreak} day streak!</Text>
                 </View>
               )}
 
@@ -1584,12 +1563,12 @@ export default function App() {
                 );
               });
             })()}
-          </>
+          </Pressable>
         ) : null}
       </ScrollView>
 
       {/* STICKY RATE BUTTON */}
-      {detailItem && !selectedItem && (
+      {detailItem && !selectedItem && currentTab !== 'profile' && (
         <View style={{ position: 'absolute', bottom: 90, left: 20, right: 20, zIndex: 99 }}>
           <TouchableOpacity style={styles.submitButton} onPress={() => openReviewModal(detailItem)}>
             <Text style={styles.submitButtonText}>Would you order this again? 🍽️</Text>
@@ -1602,7 +1581,7 @@ export default function App() {
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
             <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
             <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
           </View>
         </View>
@@ -1611,15 +1590,15 @@ export default function App() {
       {/* BOTTOM NAV */}
       {!selectedItem && (
         <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); }}>
+          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); mainScrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
             <Home color={currentTab === 'home' ? '#00A86B' : '#888'} size={24} />
             <Text style={[styles.navText, currentTab === 'home' && styles.navTextActive]}>Home</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('review'); setSelectedRestaurant(null); setDetailItem(null); }}>
+          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('review'); setSelectedRestaurant(null); setDetailItem(null); mainScrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
             <PlusCircle color={currentTab === 'review' ? '#00A86B' : '#888'} size={24} />
             <Text style={[styles.navText, currentTab === 'review' && styles.navTextActive]}>Review</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentTab('profile')}>
+          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('profile'); mainScrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
             <User color={currentTab === 'profile' ? '#00A86B' : '#888'} size={24} />
             <Text style={[styles.navText, currentTab === 'profile' && styles.navTextActive]}>Profile</Text>
           </TouchableOpacity>
@@ -1643,7 +1622,7 @@ export default function App() {
                 <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
                   {existingReviewId ? 'Editing Recent Review' : 'New Review'}
                 </Text>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: '#111' }} numberOfLines={1}>{selectedItem.name}</Text>
+                <Text style={{ fontSize: 20, fontWeight: '700', color: '#111' }} numberOfLines={1}>{selectedItem.name}</Text>
               </View>
               <TouchableOpacity onPress={closeModal} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }}>
                 <X color="#555" size={18} />
@@ -1705,7 +1684,7 @@ export default function App() {
               <View style={{ marginBottom: 16 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Message to Chef</Text>
                 <TextInput
-                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top' }}
+                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top', outlineColor: '#00A86B' }}
                   placeholder="e.g. The chef nailed the spices today!"
                   placeholderTextColor="#BBB"
                   value={publicNote}
@@ -1721,7 +1700,7 @@ export default function App() {
                   <Text style={{ fontSize: 13 }}>🔒</Text>
                 </View>
                 <TextInput
-                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top' }}
+                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top', outlineColor: '#00A86B' }}
                   placeholder="A note to your future self..."
                   placeholderTextColor="#BBB"
                   value={privateNote}
@@ -1739,7 +1718,7 @@ export default function App() {
                       onPress={() => setShowPhotoPicker(true)}
                       style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 18, borderWidth: 2, borderColor: '#00A86B', backgroundColor: '#F0FDF4' }}>
                       <Camera color="#00A86B" size={20} />
-                      <Text style={{ color: '#00A86B', fontSize: 15, fontWeight: '800' }}>Change Photo</Text>
+                      <Text style={{ color: '#00A86B', fontSize: 15, fontWeight: '700' }}>Change Photo</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => setReviewImage(null)}
@@ -1797,7 +1776,7 @@ export default function App() {
                 disabled={submitting}>
                 {submitting ? <ActivityIndicator color="#fff" /> : (
                   <>
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 }}>
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 }}>
                       {existingReviewId ? 'Update Review' : publicNote ? 'Send to Chef & Save' : 'Save to Diary'}
                     </Text>
                     <Send color="#fff" size={18} />
@@ -1815,7 +1794,7 @@ export default function App() {
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
             <Text style={{ fontSize: 56, marginBottom: 14 }}>🥳</Text>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 22, marginBottom: 6 }}>Welcome!</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Welcome!</Text>
             <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your account is created.{'\n'}Let's start reviewing.</Text>
           </View>
         </View>
@@ -1834,7 +1813,7 @@ export default function App() {
                   <Text style={{ fontSize: 26 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
                 </View>
                 <View style={{ marginLeft: 14 }}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>{profileUsername || 'Foodie'}</Text>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '700' }}>{profileUsername || 'Foodie'}</Text>
                   <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2, fontWeight: '500' }}>{diaryEntries.length} bites tracked 🍽️</Text>
                   {reviewStreak > 0 && <Text style={{ color: '#FCD34D', fontSize: 12, marginTop: 4, fontWeight: '700' }}>🔥 {reviewStreak} day streak</Text>}
                 </View>
@@ -1877,7 +1856,7 @@ export default function App() {
                 onPress={() => { closeSidebar(); setTimeout(() => { supabase.auth.signOut(); setEmail(''); setPassword(''); setAuthError(''); setProfileUsername(''); setFavourites([]); setLikedItems([]); setLikedItemDetails([]); setTrendingDishes([]); setDiaryEntries([]); }, 300); }}
                 style={{ padding: 16, backgroundColor: '#FEF2F2', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: '#FECACA' }}>
                 <LogOut color="#DC2626" size={20} />
-                <Text style={{ color: '#DC2626', fontWeight: '800', fontSize: 16 }}>Sign Out</Text>
+                <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 16 }}>Sign Out</Text>
               </TouchableOpacity>
             </View>
           </Animated.View>
@@ -1910,13 +1889,11 @@ export default function App() {
 
       {/* SUCCESS TOAST */}
       {showSuccess && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#00A86B', width: '70%', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, elevation: 10 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 32 }}>✅</Text>
-            </View>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 20, marginBottom: 4 }}>Review Saved!</Text>
-            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>Your bite has been recorded in your food diary.</Text>
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
+            <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
+            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
           </View>
         </View>
       )}
@@ -1928,8 +1905,8 @@ export default function App() {
             <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 32 }}>🛑</Text>
             </View>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 20, marginBottom: 4 }}>Daily Limit Reached</Text>
-            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>You've posted 5 reviews today. {'\n'}Come back tomorrow for more!</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 20, marginBottom: 4 }}>{limitMsg.title}</Text>
+            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>{limitMsg.body}</Text>
             <TouchableOpacity onPress={() => setShowLimit(false)} style={{ marginTop: 20, backgroundColor: '#EF4444', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Got it!</Text>
             </TouchableOpacity>
@@ -1942,23 +1919,23 @@ export default function App() {
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: '#F8F9FA', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0 },
   loadingContainer: { flex: 1, backgroundColor: '#F8F9FA', justifyContent: 'center', alignItems: 'center' },
 
   authContainer: { flex: 1, justifyContent: 'center', padding: 28 },
-  authTitle: { color: '#1A1A1A', fontSize: 38, fontWeight: '800', textAlign: 'center', marginBottom: 8, letterSpacing: -0.5 },
+  authTitle: { color: '#1A1A1A', fontSize: 38, fontWeight: '700', textAlign: 'center', marginBottom: 8, letterSpacing: -0.5 },
   authSubtitle: { color: '#4B5563', fontSize: 16, textAlign: 'center', marginBottom: 40 },
 
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
-  headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '800' },
+  headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '700' },
 
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
   searchInput: { flex: 1, color: '#1A1A1A', fontSize: 15 },
 
   scrollContent: { padding: 20, paddingBottom: 180 },
-  sectionTitle: { color: '#1A1A1A', fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  sectionTitle: { color: '#1A1A1A', fontSize: 22, fontWeight: '700', marginBottom: 16 },
   emptyText: { color: '#6B7280', fontSize: 15, textAlign: 'center', marginTop: 60 },
-  categoryHeader: { color: '#00A86B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 18, marginBottom: 10, paddingLeft: 2 },
+  categoryHeader: { color: '#00A86B', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 18, marginBottom: 10, paddingLeft: 2 },
 
   restaurantCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 18, borderRadius: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' },
   restaurantIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
@@ -1997,5 +1974,5 @@ const styles = StyleSheet.create({
   inputLabel: { color: '#666', marginBottom: 8, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   textInput: { backgroundColor: '#F8F9FA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 15, fontSize: 15 },
   submitButton: { backgroundColor: '#00A86B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: 16, marginTop: 8, gap: 10, shadowColor: '#00A86B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });
