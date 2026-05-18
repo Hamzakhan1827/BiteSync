@@ -1904,13 +1904,10 @@ export default function App() {
             </View>
 
             {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
-              <View>
-                <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
-                  {existingReviewId ? 'Editing Recent Review' : 'New Review'}
-                </Text>
-                <Text style={{ fontSize: 20, fontWeight: '700', color: '#111' }} numberOfLines={1}>{selectedItem.name}</Text>
-              </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
+              <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>
+                {existingReviewId ? 'Editing Recent Review' : 'New Review'}
+              </Text>
               <TouchableOpacity onPress={closeModal} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }}>
                 <X color="#555" size={18} />
               </TouchableOpacity>
@@ -1934,6 +1931,9 @@ export default function App() {
                   </View>
                 );
               })()}
+
+              {/* Item name — heading for the image */}
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 10 }} numberOfLines={2}>{selectedItem.name}</Text>
 
               {/* Dish image — no add photo button here anymore */}
               <View style={{ marginBottom: 20 }}>
