@@ -1091,12 +1091,20 @@ export default function App() {
         )}
       </View>
 
+      {searchDropOpen && (
+        <Pressable
+          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
+          onPress={() => { setSearchDropdownVisible(false); Keyboard.dismiss(); }}
+        />
+      )}
+
       <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         overScrollMode="never"
         bounces={true}
+        onScrollBeginDrag={() => { setSearchDropdownVisible(false); Keyboard.dismiss(); }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A86B" colors={['#00A86B']} progressBackgroundColor="#fff" />}
       >
         {loading ? (
