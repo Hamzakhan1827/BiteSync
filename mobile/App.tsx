@@ -116,6 +116,7 @@ export default function App() {
   const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
   const [resetLoading, setResetLoading] = useState(false);
   const [resetError, setResetError] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [username, setUsername] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
@@ -668,7 +669,7 @@ export default function App() {
     try {
       const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'bitesync://reset-password' });
       if (error) throw error;
-      Alert.alert('Reset Email Sent', 'If an account exists for that email, a reset link has been sent.');
+      setResetEmailSent(true);
     } catch (err: any) {
       setAuthError('Failed to send reset email. Please try again.');
     } finally {
@@ -1140,6 +1141,29 @@ export default function App() {
             </TouchableOpacity>
           </ScrollView>
         </KeyboardAvoidingView>
+
+        <Modal visible={resetEmailSent} transparent animationType="fade">
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', width: '80%', borderWidth: 1, borderColor: '#DCFCE7', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16 }}>
+              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 36 }}>📧</Text>
+              </View>
+              <Text style={{ color: '#111', fontWeight: '800', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>Check your inbox</Text>
+              <Text style={{ color: '#555', fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 6 }}>
+                A password reset link has been sent to your email.
+              </Text>
+              <Text style={{ color: '#00A86B', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 24 }}>
+                Don't forget to check spam.
+              </Text>
+              <TouchableOpacity
+                onPress={() => setResetEmailSent(false)}
+                style={{ backgroundColor: '#00A86B', borderRadius: 14, paddingVertical: 13, paddingHorizontal: 32 }}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Got it</Text>
+              </TouchableOpacity>
+            </View>
+          </View>
+        </Modal>
+
       </SafeAreaView>
     );
   }
