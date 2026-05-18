@@ -363,23 +363,12 @@ export default function App() {
     });
 
     const handleDeepLink = async (url: string) => {
-      // PKCE flow: bitesync://reset-password?code=xxx
-      const queryPart = url.split('?')[1]?.split('#')[0];
-      if (queryPart) {
-        const qParams: Record<string, string> = {};
-        queryPart.split('&').forEach(p => { const [k, ...rest] = p.split('='); if (k) qParams[k] = decodeURIComponent(rest.join('=')); });
-        if (qParams.code) {
-          await supabase.auth.exchangeCodeForSession(qParams.code);
-          return;
-        }
-      }
-      // Implicit flow fallback: bitesync://reset-password#access_token=xxx
       const fragment = url.split('#')[1];
       if (!fragment) return;
-      const fParams: Record<string, string> = {};
-      fragment.split('&').forEach(p => { const [k, ...rest] = p.split('='); if (k) fParams[k] = decodeURIComponent(rest.join('=')); });
-      if (fParams.type === 'recovery' && fParams.access_token) {
-        await supabase.auth.setSession({ access_token: fParams.access_token, refresh_token: fParams.refresh_token || '' });
+      const params: Record<string, string> = {};
+      fragment.split('&').forEach(p => { const [k, ...rest] = p.split('='); if (k) params[k] = decodeURIComponent(rest.join('=')); });
+      if (params.type === 'recovery' && params.access_token) {
+        await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token || '' });
       }
     };
 
@@ -1217,13 +1206,6 @@ export default function App() {
         )}
       </View>
 
-      {searchDropOpen && (
-        <Pressable
-          style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 99 }}
-          onPress={() => { setSearchDropdownVisible(false); Keyboard.dismiss(); }}
-        />
-      )}
-
       <ScrollView
         ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
@@ -1281,7 +1263,7 @@ export default function App() {
                       </>
                     ) : null
                   ) : (
-                    <ScrollView bounces={false} keyboardShouldPersistTaps="handled" style={{ maxHeight: 340 }}>
+                    <View>
                       {homeDropdownRestaurants.length > 0 && (
                         <>
                           <Text style={{ fontSize: 11, color: '#aaa', fontWeight: '700', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, letterSpacing: 0.8 }}>RESTAURANTS</Text>
@@ -1324,7 +1306,7 @@ export default function App() {
                         <Text style={{ color: '#bbb', textAlign: 'center', padding: 20, fontSize: 14 }}>No results for "{homeSearchText}"</Text>
                       )}
                       <View style={{ height: 8 }} />
-                    </ScrollView>
+                    </View>
                   )}
                 </View>
               )}
