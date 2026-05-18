@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
   StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView,
-  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal, Pressable, Keyboard, Dimensions
+  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal, Pressable, Keyboard, Dimensions, Linking
 } from 'react-native';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
@@ -111,6 +111,11 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [resetPasswordMode, setResetPasswordMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
   const [username, setUsername] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
@@ -329,6 +334,10 @@ export default function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setResetPasswordMode(true);
+        return;
+      }
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setDiaryEntries([]);
@@ -351,7 +360,21 @@ export default function App() {
         fetchTrending();
       }
     });
-    return () => subscription.unsubscribe();
+
+    const handleDeepLink = async (url: string) => {
+      const fragment = url.split('#')[1];
+      if (!fragment) return;
+      const params: Record<string, string> = {};
+      fragment.split('&').forEach(p => { const [k, v] = p.split('='); if (k) params[k] = decodeURIComponent(v || ''); });
+      if (params.type === 'recovery' && params.access_token) {
+        await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token || '' });
+      }
+    };
+
+    Linking.getInitialURL().then(url => { if (url) handleDeepLink(url); });
+    const linkSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+
+    return () => { subscription.unsubscribe(); linkSub.remove(); };
   }, []);
 
   // --- DATA FETCHING ---
@@ -643,13 +666,32 @@ export default function App() {
     setAuthLoading(true);
     setAuthError('');
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'bitesync://reset-password' });
       if (error) throw error;
       Alert.alert('Reset Email Sent', 'If an account exists for that email, a reset link has been sent.');
     } catch (err: any) {
       setAuthError('Failed to send reset email. Please try again.');
     } finally {
       setAuthLoading(false);
+    }
+  };
+
+  const handleSetNewPassword = async () => {
+    if (newPassword.length < 8) { setResetError('Password must be at least 8 characters.'); return; }
+    if (newPassword !== newPasswordConfirm) { setResetError('Passwords do not match.'); return; }
+    setResetLoading(true);
+    setResetError('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setResetPasswordMode(false);
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      Alert.alert('Password Updated', 'Your password has been changed. You can now log in.');
+    } catch {
+      setResetError('Failed to update password. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -1011,6 +1053,51 @@ export default function App() {
     }
     setRefreshing(false);
   };
+
+  // --- RESET PASSWORD SCREEN ---
+  if (resetPasswordMode) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ alignSelf: 'center', marginBottom: 24 }}>
+              <BiteSyncLogo size={32} textColor="#0b1220" />
+            </View>
+            <Text style={{ fontSize: 24, fontWeight: '800', color: '#111', marginBottom: 6 }}>Set New Password</Text>
+            <Text style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Choose a strong password for your account.</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="New password"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              value={newPassword}
+              onChangeText={t => { setNewPassword(t); setResetError(''); }}
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={[styles.input, { marginTop: 12 }]}
+              placeholder="Confirm new password"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              value={newPasswordConfirm}
+              onChangeText={t => { setNewPasswordConfirm(t); setResetError(''); }}
+              autoCapitalize="none"
+            />
+            {resetError ? <Text style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{resetError}</Text> : null}
+            <TouchableOpacity
+              onPress={handleSetNewPassword}
+              disabled={resetLoading}
+              style={{ backgroundColor: '#00A86B', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 20 }}>
+              {resetLoading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Update Password</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
 
   // --- AUTH SCREEN ---
   if (!session) {
