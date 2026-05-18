@@ -363,12 +363,23 @@ export default function App() {
     });
 
     const handleDeepLink = async (url: string) => {
+      // PKCE flow: bitesync://reset-password?code=xxx
+      const queryPart = url.split('?')[1]?.split('#')[0];
+      if (queryPart) {
+        const qParams: Record<string, string> = {};
+        queryPart.split('&').forEach(p => { const [k, ...rest] = p.split('='); if (k) qParams[k] = decodeURIComponent(rest.join('=')); });
+        if (qParams.code) {
+          await supabase.auth.exchangeCodeForSession(qParams.code);
+          return;
+        }
+      }
+      // Implicit flow fallback: bitesync://reset-password#access_token=xxx
       const fragment = url.split('#')[1];
       if (!fragment) return;
-      const params: Record<string, string> = {};
-      fragment.split('&').forEach(p => { const [k, v] = p.split('='); if (k) params[k] = decodeURIComponent(v || ''); });
-      if (params.type === 'recovery' && params.access_token) {
-        await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token || '' });
+      const fParams: Record<string, string> = {};
+      fragment.split('&').forEach(p => { const [k, ...rest] = p.split('='); if (k) fParams[k] = decodeURIComponent(rest.join('=')); });
+      if (fParams.type === 'recovery' && fParams.access_token) {
+        await supabase.auth.setSession({ access_token: fParams.access_token, refresh_token: fParams.refresh_token || '' });
       }
     };
 
@@ -644,14 +655,18 @@ export default function App() {
     fetchMenu(rest.id);
   };
 
-  const handleDishSearchSelect = (dish: any) => {
+  const handleDishSearchSelect = async (dish: any) => {
     const restId = dish.menu_categories?.restaurant_id;
-    const restObj = restaurants.find((r: any) => r.id === restId);
-    if (restObj) {
-      setSelectedRestaurant(restObj);
-      fetchMenu(restObj.id);
-      openDetailPage(dish);
+    if (!restId) return;
+    let restObj = restaurants.find((r: any) => r.id === restId);
+    if (!restObj) {
+      const { data } = await supabase.from('restaurants').select('*').eq('id', restId).single();
+      restObj = data;
     }
+    if (!restObj) return;
+    setSelectedRestaurant(restObj);
+    fetchMenu(restObj.id);
+    openDetailPage(dish);
   };
 
   const handleForgotPassword = async () => {
@@ -1225,8 +1240,8 @@ export default function App() {
           /* ---- HOME LANDING ---- */
           <>
             {/* HOME SEARCH BAR — connected dropdown */}
-            <View style={{ zIndex: 100, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: searchDropOpen ? '#00A86B' : '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 20, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 }}>
+            <View style={{ zIndex: 100, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: searchDropOpen ? '#00A86B' : '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 20, marginHorizontal: -6, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 }}>
                 <Search color={searchDropOpen ? '#00A86B' : '#888'} size={18} style={{ marginRight: 10 }} />
                 <TextInput
                   ref={homeSearchInputRef}
@@ -1239,8 +1254,11 @@ export default function App() {
                   onBlur={() => setTimeout(() => setSearchDropdownVisible(false), 180)}
                 />
                 {homeSearchText.length > 0 && (
-                  <TouchableOpacity onPress={() => { setHomeSearchText(''); setHomeDropdownRestaurants([]); setHomeDropdownDishes([]); }}>
-                    <X color="#888" size={16} />
+                  <TouchableOpacity
+                    onPress={() => { setHomeSearchText(''); setHomeDropdownRestaurants([]); setHomeDropdownDishes([]); homeSearchInputRef.current?.focus(); }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    style={{ padding: 8 }}>
+                    <X color="#555" size={18} />
                   </TouchableOpacity>
                 )}
               </View>
@@ -2366,7 +2384,7 @@ const styles = StyleSheet.create({
   header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
   headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '700' },
 
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 20, marginHorizontal: -6, borderWidth: 1, borderColor: '#EAEAEA' },
   searchInput: { flex: 1, color: '#1A1A1A', fontSize: 15 },
 
   scrollContent: { padding: 20, paddingBottom: 180 },
