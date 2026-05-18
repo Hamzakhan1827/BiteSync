@@ -1074,15 +1074,19 @@ export default function App() {
           </TouchableOpacity>
         ) : (
           <>
-            <TouchableOpacity onPress={openSidebar}><Menu color="#111" size={24} /></TouchableOpacity>
-            <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }}>
-              <View style={{ marginLeft: 8 }}>
+            <View style={{ flex: 1 }}>
+              <TouchableOpacity onPress={openSidebar}><Menu color="#111" size={24} /></TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }}>
                 <BiteSyncLogo size={18} textColor="#111" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setCurrentTab('profile')} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#00A86B' }}>
-              <Text style={{ fontSize: 18 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <TouchableOpacity onPress={() => setCurrentTab('profile')} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#00A86B' }}>
+                <Text style={{ fontSize: 18 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </View>
@@ -1102,8 +1106,8 @@ export default function App() {
           /* ---- HOME LANDING ---- */
           <>
             {/* HOME SEARCH BAR — connected dropdown */}
-            <View style={{ zIndex: 100, backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: searchDropOpen ? 0 : 16, borderBottomRightRadius: searchDropOpen ? 0 : 16, borderWidth: 1, borderColor: searchDropOpen ? '#00A86B' : '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 20, overflow: 'hidden' }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}>
+            <View style={{ zIndex: 100, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: searchDropOpen ? '#00A86B' : '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 20, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 10 }}>
                 <Search color={searchDropOpen ? '#00A86B' : '#888'} size={18} style={{ marginRight: 10 }} />
                 <TextInput
                   ref={homeSearchInputRef}
@@ -2240,7 +2244,7 @@ const styles = StyleSheet.create({
   authTitle: { color: '#1A1A1A', fontSize: 38, fontWeight: '700', textAlign: 'center', marginBottom: 8, letterSpacing: -0.5 },
   authSubtitle: { color: '#4B5563', fontSize: 16, textAlign: 'center', marginBottom: 40 },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
   headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '700' },
 
   searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
