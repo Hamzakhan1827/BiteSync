@@ -10,10 +10,25 @@ import { BiteSyncLogo, BiteSyncMark } from './BiteSyncLogo';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { validatePasswordStrength, RateLimiter, validateEmail, validateUsername as validateUsernameUtil } from './lib/authUtils';
 
 // --- CONSTANTS & HELPERS ---
 const FOOD_PLACEHOLDER = 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80';
+const DIARY_PAGE_SIZE = 30;
+
+const compressImage = async (uri: string): Promise<string> => {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1200 } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  } catch {
+    return uri;
+  }
+};
 const getItemImage = (item: any) => item?.image_url || FOOD_PLACEHOLDER;
 const getRestaurantImage = (rest: any) => rest?.logo_url || FOOD_PLACEHOLDER;
 
@@ -141,6 +156,9 @@ export default function App() {
   const [menuSearchResults, setMenuSearchResults] = useState<any[]>([]);
   const [reviewStreak, setReviewStreak] = useState(0);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [diaryPage, setDiaryPage] = useState(0);
+  const [diaryHasMore, setDiaryHasMore] = useState(false);
+  const [diaryLoadingMore, setDiaryLoadingMore] = useState(false);
 
   const AVATAR_EMOJIS = ['🧑‍🍳', '🦊', '🐼', '🐨', '🐸', '🦁', '🐻', '🐙'];
 
@@ -255,15 +273,11 @@ export default function App() {
     });
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
-      // When a refresh token is invalid/expired, Supabase emits SIGNED_OUT.
-      // Clear any stale AsyncStorage session so the user lands on the login screen.
-      if (event === 'TOKEN_REFRESHED' && !session) {
-        supabase.auth.signOut();
-        return;
-      }
       if (event === 'SIGNED_OUT') {
         setSession(null);
         setDiaryEntries([]);
+        setDiaryPage(0);
+        setDiaryHasMore(false);
         setRestaurants([]);
         setFavourites([]);
         setLikedItems([]);
@@ -294,7 +308,7 @@ export default function App() {
       const { data: items } = await supabase.from('menu_items').select('id, category_id').in('category_id', catIds);
       if (!items?.length) return;
       const itemIds = items.map((it: any) => it.id);
-      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', itemIds).not('rating_thumbs', 'is', null);
+      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', itemIds).not('rating_thumbs', 'is', null).limit(1000);
       const catToRest: Record<string, string> = {};
       cats.forEach((c: any) => { catToRest[c.id] = c.restaurant_id; });
       const itemToRest: Record<string, string> = {};
@@ -335,7 +349,7 @@ export default function App() {
       const items = data || [];
 
       const statsPromise = items.length > 0
-        ? supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', items.map((it: any) => it.id)).not('rating_thumbs', 'is', null)
+        ? supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', items.map((it: any) => it.id)).not('rating_thumbs', 'is', null).limit(2000)
         : Promise.resolve({ data: [] });
 
       const { data: reviews } = await statsPromise;
@@ -361,11 +375,14 @@ export default function App() {
     finally { setMenuLoading(false); }
   };
 
-  const fetchDiary = async (userId?: string) => {
+  const fetchDiary = async (userId?: string, page = 0, append = false) => {
     const uid = userId ?? session?.user?.id;
     if (!uid) return;
+    if (append) setDiaryLoadingMore(true);
     try {
-      const { data, error } = await supabase
+      const from = page * DIARY_PAGE_SIZE;
+      const to = from + DIARY_PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from('reviews')
         .select(`
           id, created_at, rating_thumbs, private_note, public_note, photo_url,
@@ -375,12 +392,17 @@ export default function App() {
               restaurants (name, logo_url)
             )
           )
-        `)
+        `, { count: 'exact' })
         .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      setDiaryEntries(data || []);
+      const entries = data || [];
+      setDiaryEntries(prev => append ? [...prev, ...entries] : entries);
+      setDiaryPage(page);
+      setDiaryHasMore(from + entries.length < (count ?? 0));
     } catch (err) { console.error(err); }
+    finally { if (append) setDiaryLoadingMore(false); }
   };
 
   const fetchFavourites = async (userId: string) => {
@@ -445,7 +467,7 @@ export default function App() {
 
   const fetchTrending = async () => {
     try {
-      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').not('rating_thumbs', 'is', null);
+      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').not('rating_thumbs', 'is', null).order('created_at', { ascending: false }).limit(600);
       if (!revs?.length) return;
       const agg: Record<string, { up: number; total: number }> = {};
       revs.forEach((r: any) => {
@@ -487,8 +509,11 @@ export default function App() {
       Alert.alert('Permission needed', 'Please allow camera access to take a photo.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
-    if (!result.canceled && result.assets?.[0]) setReviewImage(result.assets[0].uri);
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.8 });
+    if (!result.canceled && result.assets?.[0]) {
+      const compressed = await compressImage(result.assets[0].uri);
+      setReviewImage(compressed);
+    }
   };
 
   const pickFromGallery = async () => {
@@ -502,9 +527,12 @@ export default function App() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
+      quality: 0.8,
     });
-    if (!result.canceled && result.assets?.[0]) setReviewImage(result.assets[0].uri);
+    if (!result.canceled && result.assets?.[0]) {
+      const compressed = await compressImage(result.assets[0].uri);
+      setReviewImage(compressed);
+    }
   };
 
   const uploadReviewImage = async (localUri: string): Promise<string | null> => {
@@ -561,18 +589,23 @@ export default function App() {
   };
 
   const handleForgotPassword = async () => {
-    if (!email) {
+    if (!email.trim()) {
       setAuthError('Please enter your email to reset password.');
+      return;
+    }
+    const isAllowed = await authRateLimiter.isAllowed();
+    if (!isAllowed) {
+      setAuthError('Too many attempts. Please try again in 5 minutes.');
       return;
     }
     setAuthLoading(true);
     setAuthError('');
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email);
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim());
       if (error) throw error;
-      Alert.alert('Reset Email Sent', 'Check your inbox for password reset instructions.');
+      Alert.alert('Reset Email Sent', 'If an account exists for that email, a reset link has been sent.');
     } catch (err: any) {
-      setAuthError(err.message || 'Failed to send reset email.');
+      setAuthError('Failed to send reset email. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -715,8 +748,7 @@ export default function App() {
       }
 
       if (existingReviewId) {
-        const updates: any = { rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote };
-        if (photoUrl) updates.photo_url = photoUrl;
+        const updates: any = { rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote, photo_url: photoUrl };
         const { error } = await supabase.from('reviews').update(updates).eq('id', existingReviewId);
         if (error) throw error;
       } else {
@@ -764,11 +796,23 @@ export default function App() {
       fetchDiary();
       if (selectedRestaurant) fetchMenu(selectedRestaurant.id);
       if (detailItem) fetchItemReviews(detailItem.id, 0, false);
-    } catch (err: any) { 
-      console.error('Submit Error:', err);
-      Alert.alert('Submission Error', err.message || 'An unexpected error occurred. Please try again.'); 
-    } finally { 
-      setSubmitting(false); 
+    } catch (err: any) {
+      const hint = err?.message || '';
+      if (hint.includes('DAILY_LIMIT_REACHED') || hint.includes('Daily review limit')) {
+        setLimitMsg({ title: 'Daily Limit Reached', body: "You've posted 5 reviews today.\nCome back tomorrow for more!" });
+        setShowLimit(true);
+        setTimeout(() => setShowLimit(false), 4000);
+      } else if (hint.includes('ITEM_LIMIT_REACHED') || hint.includes('Item review limit')) {
+        setLimitMsg({ title: 'Already Reviewed Today', body: "You've reviewed this dish twice today.\nCome back tomorrow to review again!" });
+        setShowLimit(true);
+        setTimeout(() => setShowLimit(false), 4000);
+      } else if (hint.includes('EDIT_WINDOW_EXPIRED') || hint.includes('edit window')) {
+        Alert.alert('Edit Window Closed', 'Reviews can only be edited within 5 minutes of submission.');
+      } else {
+        Alert.alert('Submission Error', 'An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -911,7 +955,7 @@ export default function App() {
             <TouchableOpacity style={[styles.submitButton, { marginTop: 20 }]} onPress={() => handleAuth(isSignUp)} disabled={authLoading}>
               {authLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>}
             </TouchableOpacity>
-            <TouchableOpacity style={{ marginTop: 24, padding: 10 }} onPress={() => { setIsSignUp(!isSignUp); setAuthError(''); setUsername(''); }} disabled={authLoading}>
+            <TouchableOpacity style={{ marginTop: 24, padding: 10 }} onPress={() => { setIsSignUp(!isSignUp); setAuthError(''); setUsername(''); setPassword(''); }} disabled={authLoading}>
               <Text style={{ color: '#666', textAlign: 'center', fontSize: 14 }}>
                 {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
                 <Text style={{ color: '#00A86B', fontWeight: '700' }}>{isSignUp ? 'Sign In' : 'Create an account'}</Text>
@@ -1479,7 +1523,15 @@ export default function App() {
                 groups[restName].push(entry);
                 return groups;
               }, {});
-              const filteredRestNames = Object.keys(grouped).filter(name => name.toLowerCase().includes(diarySearchQuery.toLowerCase()));
+              const q = diarySearchQuery.toLowerCase();
+              const filteredRestNames = Object.keys(grouped).filter(name =>
+                name.toLowerCase().includes(q) ||
+                grouped[name].some((e: any) =>
+                  e.menu_items?.name?.toLowerCase().includes(q) ||
+                  e.private_note?.toLowerCase().includes(q) ||
+                  e.public_note?.toLowerCase().includes(q)
+                )
+              );
               if (filteredRestNames.length === 0) return <Text style={styles.emptyText}>No diary entries match "{diarySearchQuery}"</Text>;
 
               return filteredRestNames.map((restName: string) => {
@@ -1591,6 +1643,18 @@ export default function App() {
                 );
               });
             })()}
+
+            {diaryHasMore && (
+              <TouchableOpacity
+                onPress={() => fetchDiary(undefined, diaryPage + 1, true)}
+                disabled={diaryLoadingMore}
+                style={{ marginTop: 8, marginBottom: 24, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', backgroundColor: '#F0FDF4', alignItems: 'center' }}
+              >
+                {diaryLoadingMore
+                  ? <ActivityIndicator color="#00A86B" />
+                  : <Text style={{ color: '#00A86B', fontWeight: '700', fontSize: 14 }}>Load More Entries</Text>}
+              </TouchableOpacity>
+            )}
           </Pressable>
         ) : null}
       </ScrollView>
@@ -1916,17 +1980,6 @@ export default function App() {
           </View>
         </TouchableOpacity>
       </Modal>
-
-      {/* SUCCESS TOAST */}
-      {showSuccess && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
-            <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
-            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
-            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
-          </View>
-        </View>
-      )}
 
       {/* LIMIT REACHED TOAST */}
       {showLimit && (
