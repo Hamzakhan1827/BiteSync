@@ -255,7 +255,7 @@ export default function App() {
       try {
         const [rests, dishes] = await Promise.all([
           supabase.from('restaurants').select('id, name, logo_url, address, cuisine_type').ilike('name', `%${homeSearchText}%`).limit(5),
-          supabase.from('menu_items').select('id, name, price, image_url, menu_categories!inner(id, name, restaurants(id, name))').ilike('name', `%${homeSearchText}%`).limit(5),
+          supabase.from('menu_items').select('id, name, price, image_url, menu_categories!inner(id, name, restaurant_id, restaurants(id, name))').ilike('name', `%${homeSearchText}%`).limit(5),
         ]);
         setHomeDropdownRestaurants(rests.data || []);
         setHomeDropdownDishes(dishes.data || []);
@@ -593,28 +593,14 @@ export default function App() {
 
   const uploadReviewImage = async (localUri: string): Promise<string | null> => {
     try {
-      const ext = localUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
-      const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
-      // Path must be {uid}/{filename} to satisfy owner-scoped storage RLS policy
-      const filename = `${session!.user.id}/${Date.now()}.${ext}`;
+      const filename = `${session!.user.id}/${Date.now()}.jpg`;
+      const response = await fetch(localUri);
+      const blob = await response.blob();
 
-      // Convert local URI to Blob for Supabase upload (Robust method)
-      const blob: any = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onload = function () { resolve(xhr.response); };
-        xhr.onerror = function (e) { 
-          console.error('XHR Error:', e);
-          reject(new TypeError("Network request failed")); 
-        };
-        xhr.responseType = "blob";
-        xhr.open("GET", localUri, true);
-        xhr.send(null);
-      });
-
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('review-photos')
-        .upload(filename, blob, { 
-          contentType,
+        .upload(filename, blob, {
+          contentType: 'image/jpeg',
           cacheControl: '3600',
           upsert: true
         });
@@ -958,6 +944,8 @@ export default function App() {
 
   const priceRange = useMemo(() => getPriceRange(menuItems), [menuItems]);
 
+  const searchDropOpen = searchDropdownVisible && (homeSearchText.length >= 2 || searchHistory.length > 0);
+
   // --- SPLASH / LOADING GUARD ---
   if (onboardingDone === null || (loading && !session)) {
     return (
@@ -1113,15 +1101,15 @@ export default function App() {
         ) : currentTab === 'home' && homeView === 'landing' && !selectedRestaurant ? (
           /* ---- HOME LANDING ---- */
           <>
-            {/* HOME SEARCH BAR — inline dropdown */}
-            <View style={{ position: 'relative', zIndex: 100 }}>
-              <View style={styles.searchBar}>
-                <Search color="#888" size={18} style={{ marginRight: 10 }} />
+            {/* HOME SEARCH BAR — connected dropdown */}
+            <View style={{ zIndex: 100, backgroundColor: '#fff', borderTopLeftRadius: 16, borderTopRightRadius: 16, borderBottomLeftRadius: searchDropOpen ? 0 : 16, borderBottomRightRadius: searchDropOpen ? 0 : 16, borderWidth: 1, borderColor: searchDropOpen ? '#00A86B' : '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 20, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 12 }}>
+                <Search color={searchDropOpen ? '#00A86B' : '#888'} size={18} style={{ marginRight: 10 }} />
                 <TextInput
                   ref={homeSearchInputRef}
                   style={styles.searchInput}
                   placeholder="Search restaurants & dishes..."
-                  placeholderTextColor="#888"
+                  placeholderTextColor="#aaa"
                   value={homeSearchText}
                   onChangeText={setHomeSearchText}
                   onFocus={() => { loadSearchHistory(); setSearchDropdownVisible(true); }}
@@ -1134,8 +1122,8 @@ export default function App() {
                 )}
               </View>
 
-              {searchDropdownVisible && (
-                <View style={{ position: 'absolute', top: 52, left: 0, right: 0, backgroundColor: '#fff', borderRadius: 20, shadowColor: '#000', shadowOffset: { width: 0, height: 8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 24, zIndex: 200, overflow: 'hidden' }}>
+              {searchDropOpen && (
+                <View style={{ borderTopWidth: 1, borderTopColor: '#F0F0F0' }}>
                   {homeSearchText.length < 2 ? (
                     searchHistory.length > 0 ? (
                       <>
@@ -1150,9 +1138,7 @@ export default function App() {
                         ))}
                         <View style={{ height: 8 }} />
                       </>
-                    ) : (
-                      <Text style={{ color: '#bbb', textAlign: 'center', padding: 20, fontSize: 14 }}>Start typing to discover restaurants & dishes</Text>
-                    )
+                    ) : null
                   ) : (
                     <ScrollView bounces={false} keyboardShouldPersistTaps="handled" style={{ maxHeight: 340 }}>
                       {homeDropdownRestaurants.length > 0 && (
@@ -1417,9 +1403,9 @@ export default function App() {
                             {r.rating_thumbs === true ? <ThumbsUp color="#10b981" size={14} /> : r.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={14} /> : null}
                           </View>
                           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                            <View style={{ flex: 1, minHeight: 80, justifyContent: 'space-between' }}>
-                              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 22 }}>{r.public_note}</Text>
-                              <Text style={{ color: '#6B7280', fontSize: 11, marginTop: 8, fontWeight: '600' }}>{getRelativeTime(r.created_at)}</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }} numberOfLines={3} ellipsizeMode="tail">{r.public_note}</Text>
+                              <Text style={{ color: '#6B7280', fontSize: 11, marginTop: 6, fontWeight: '600' }}>{getRelativeTime(r.created_at)}</Text>
                             </View>
                             
                             {r.photo_url ? (
@@ -1884,17 +1870,6 @@ export default function App() {
         </View>
       )}
 
-      {/* SUCCESS TOAST */}
-      {showSuccess && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
-            <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
-            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
-            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
-          </View>
-        </View>
-      )}
-
       {/* BOTTOM NAV */}
       {!selectedItem && (
         <View style={styles.bottomNav}>
@@ -1937,7 +1912,7 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: Platform.OS === 'android' ? 80 : 40 }}>
 
               {/* Edit window banner */}
               {existingReviewId && (() => {
@@ -2201,6 +2176,17 @@ export default function App() {
           </View>
         </View>
       )}
+      {/* SUCCESS TOAST */}
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
+            <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
+            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
+          </View>
+        </View>
+      </Modal>
+
       {/* FULL SCREEN IMAGE LIGHTBOX (Refined for 'Mid-Screen Window' feel) */}
       <Modal visible={!!fullScreenImage} transparent={true} animationType="fade">
         <TouchableOpacity 
@@ -2227,8 +2213,8 @@ export default function App() {
       </Modal>
 
       {/* LIMIT REACHED TOAST */}
-      {showLimit && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+      <Modal visible={showLimit} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#EF4444', width: '75%', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, elevation: 10 }}>
             <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 32 }}>🛑</Text>
@@ -2240,7 +2226,7 @@ export default function App() {
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      </Modal>
 
     </SafeAreaView>
   );
