@@ -2,6 +2,7 @@ import { Header } from '@/components/Header'
 import { createClient } from '@/utils/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { RestaurantProfileEditor } from '@/components/RestaurantProfileEditor'
+import { FollowupPolicyEditor } from '@/components/FollowupPolicyEditor'
 import { AccountSettings } from '@/components/AccountSettings'
 import { redirect } from 'next/navigation'
 
@@ -35,7 +36,7 @@ export default async function SettingsPage() {
 
   const { data: restaurant } = await supabaseAdmin
     .from('restaurants')
-    .select('id, name, address, cuisine_type, opening_hours, logo_url')
+    .select('id, name, address, cuisine_type, opening_hours, logo_url, followup_enabled, followup_policy, followup_discount_percent, followup_custom_template')
     .eq('id', profile.managed_restaurant_id)
     .single()
 
@@ -52,6 +53,14 @@ export default async function SettingsPage() {
             <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">This information is shown to diners on the app.</p>
           </div>
           <RestaurantProfileEditor restaurant={restaurant} />
+
+          <hr className="border-slate-200 dark:border-slate-800" />
+
+          <div>
+            <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">AI Follow-ups</h2>
+            <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">Automatically reach out to customers after they review your restaurant.</p>
+          </div>
+          <FollowupPolicyEditor restaurant={restaurant} />
 
           <hr className="border-slate-200 dark:border-slate-800" />
 

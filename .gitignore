@@ -97,3 +97,6 @@ scratch_*.ts
 ideogram-*.jpg
 image*.png
 logo.png
+
+# Supabase CLI temp files
+supabase/.temp/

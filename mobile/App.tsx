@@ -320,7 +320,12 @@ export default function App() {
   useEffect(() => {
     AsyncStorage.getItem('bitesync_onboarding_v1').then(val => setOnboardingDone(val === 'done'));
 
-    supabase.auth.getSession().then(({ data: { session } }) => {
+    supabase.auth.getSession().then(({ data: { session }, error }) => {
+      if (error) {
+        supabase.auth.signOut();
+        setLoading(false);
+        return;
+      }
       setSession(session);
       if (session) {
         fetchRestaurants();
@@ -618,15 +623,29 @@ export default function App() {
   const uploadReviewImage = async (localUri: string): Promise<string | null> => {
     try {
       const filename = `${session!.user.id}/${Date.now()}.jpg`;
-      const response = await fetch(localUri);
-      const blob = await response.blob();
+
+      // Use ImageManipulator (already a working dependency) to extract base64.
+      // fetch+blob/arrayBuffer are unreliable on React Native for local file URIs.
+      const manipResult = await ImageManipulator.manipulateAsync(
+        localUri,
+        [],
+        { compress: 1, format: ImageManipulator.SaveFormat.JPEG, base64: true }
+      );
+      if (!manipResult.base64) throw new Error('Could not read image data');
+
+      // Decode base64 → ArrayBuffer
+      const binaryString = atob(manipResult.base64);
+      const bytes = new Uint8Array(binaryString.length);
+      for (let i = 0; i < binaryString.length; i++) {
+        bytes[i] = binaryString.charCodeAt(i);
+      }
 
       const { error } = await supabase.storage
         .from('review-photos')
-        .upload(filename, blob, {
+        .upload(filename, bytes.buffer, {
           contentType: 'image/jpeg',
           cacheControl: '3600',
-          upsert: true
+          upsert: true,
         });
 
       if (error) throw error;
@@ -675,7 +694,7 @@ export default function App() {
       if (error) throw error;
       setResetEmailSent(true);
     } catch (err: any) {
-      setAuthError('Failed to send reset email. Please try again.');
+      setAuthError(err?.message || 'Failed to send reset email. Please try again.');
     } finally {
       setAuthLoading(false);
     }
@@ -756,12 +775,14 @@ export default function App() {
     if (savingUsername) return;
     const err = validateUsername(newUsername);
     if (err) { Alert.alert('Invalid Username', err); return; }
-    if (!canEditUsername()) { Alert.alert('Too Soon', 'You can only change your username once every 30 days.'); return; }
+    if (!canEditUsername()) return;
     setSavingUsername(true);
     try {
       const now = new Date();
       const { error } = await supabase.auth.updateUser({ data: { username: newUsername.trim(), username_last_changed: now.toISOString() } });
       if (error) throw error;
+      // Keep public.users in sync so reviews show the updated username
+      await supabase.from('users').update({ username: newUsername.trim(), full_name: newUsername.trim() }).eq('id', session!.user.id);
       setProfileUsername(newUsername.trim());
       setUsernameLastChanged(now);
       setEditingUsername(false);
@@ -933,7 +954,7 @@ export default function App() {
       } else if (hint.includes('EDIT_WINDOW_EXPIRED') || hint.includes('edit window')) {
         Alert.alert('Edit Window Closed', 'Reviews can only be edited within 5 minutes of submission.');
       } else {
-        Alert.alert('Submission Error', 'An unexpected error occurred. Please try again.');
+        Alert.alert('Submission Error', err?.message || err?.details || JSON.stringify(err) || 'An unexpected error occurred.');
       }
     } finally {
       setSubmitting(false);
@@ -971,7 +992,7 @@ export default function App() {
     try {
       const [countResult, dataResult] = await Promise.all([
         supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('menu_item_id', itemId).neq('public_note', ''),
-        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, user_id, users(full_name, avatar_url)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
+        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, user_id, users(full_name, username, avatar_url)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
       ]);
       setReviewTotal(countResult.count || 0);
       if (append) { setItemReviews(prev => [...prev, ...(dataResult.data || [])]); }
@@ -1520,9 +1541,9 @@ export default function App() {
                         <View key={r.id} style={{ padding: 14, borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAEAEA' }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
                             <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#DCFCE7' }}>
-                              <Text style={{ fontSize: 17 }}>{AVATAR_EMOJIS[r.users?.avatar_url && !isNaN(parseInt(r.users.avatar_url)) ? parseInt(r.users.avatar_url) : getAvatarIndex(r.users?.full_name)]}</Text>
+                              <Text style={{ fontSize: 17 }}>{AVATAR_EMOJIS[r.users?.avatar_url && !isNaN(parseInt(r.users.avatar_url)) ? parseInt(r.users.avatar_url) : getAvatarIndex(r.users?.username || r.users?.full_name)]}</Text>
                             </View>
-                            <Text style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 15 }}>{r.users?.full_name || 'Deleted User'}</Text>
+                            <Text style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 15 }}>{r.users?.username || r.users?.full_name || 'Deleted User'}</Text>
                             {r.rating_thumbs === true ? <ThumbsUp color="#10b981" size={14} /> : r.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={14} /> : null}
                           </View>
                           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
@@ -1787,15 +1808,25 @@ export default function App() {
               )}
 
               {!editingUsername ? (
-                <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                  <Text style={{ color: '#111', fontSize: 20, fontWeight: '800' }}>{profileUsername || 'Set a username'}</Text>
-                  <TouchableOpacity onPress={() => {
-                    if (!canEditUsername()) { Alert.alert('Too Soon', 'You can only change your username once every 30 days.'); return; }
-                    setNewUsername(profileUsername); setEditingUsername(true);
-                  }}>
-                    <Text style={{ fontSize: 14 }}>✏️</Text>
-                  </TouchableOpacity>
-                </View>
+                <>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
+                    <Text style={{ color: '#111', fontSize: 20, fontWeight: '800' }}>{profileUsername || 'Set a username'}</Text>
+                    <TouchableOpacity onPress={() => {
+                      if (!canEditUsername()) return;
+                      setNewUsername(profileUsername); setEditingUsername(true);
+                    }}>
+                      <Text style={{ fontSize: 14 }}>{canEditUsername() ? '✏️' : '🔒'}</Text>
+                    </TouchableOpacity>
+                  </View>
+                  {!canEditUsername() && usernameLastChanged && (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: '#FFF7ED', paddingHorizontal: 14, paddingVertical: 7, borderRadius: 20, borderWidth: 1, borderColor: '#FED7AA', gap: 6 }}>
+                      <Clock color="#EA580C" size={13} />
+                      <Text style={{ color: '#9A3412', fontWeight: '600', fontSize: 12 }}>
+                        {Math.max(1, 30 - Math.floor((Date.now() - usernameLastChanged.getTime()) / 86400000))} days until next change
+                      </Text>
+                    </View>
+                  )}
+                </>
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, width: '80%' }}>
                   <TextInput style={[styles.textInput, { flex: 1, padding: 10, fontSize: 15 }]} value={newUsername} onChangeText={setNewUsername} autoFocus autoCapitalize="none" />
@@ -1816,9 +1847,6 @@ export default function App() {
                 </View>
               )}
 
-              {usernameLastChanged && (
-                <Text style={{ color: '#bbb', fontSize: 11, marginTop: 6 }}>Username last changed: {usernameLastChanged.toLocaleDateString()}</Text>
-              )}
             </View>
 
             <Text style={styles.sectionTitle}>My Private Diary 📔</Text>
