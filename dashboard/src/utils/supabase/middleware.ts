@@ -29,11 +29,19 @@ export async function updateSession(request: NextRequest) {
 
   const { data: { user } } = await supabase.auth.getUser()
 
-  // Protect all routes except /login
+  // If no valid user (includes stale/expired refresh token), clear cookies and redirect to /login
   if (!user && !request.nextUrl.pathname.startsWith('/login')) {
     const url = request.nextUrl.clone()
     url.pathname = '/login'
-    return NextResponse.redirect(url)
+    const redirectResponse = NextResponse.redirect(url)
+    // Clear stale Supabase auth cookies so the browser doesn't keep
+    // replaying an invalid refresh token on every request.
+    request.cookies.getAll().forEach(({ name }) => {
+      if (name.startsWith('sb-')) {
+        redirectResponse.cookies.delete(name)
+      }
+    })
+    return redirectResponse
   }
 
   // If user is logged in and trying to access /login, redirect to dashboard

@@ -1,20 +1,35 @@
 import React, { useState, useEffect, useRef, useMemo } from 'react';
 import {
-  StyleSheet, Text, View, ScrollView, TouchableOpacity,
-  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, RefreshControl, Modal
+  StyleSheet, Text, View, ScrollView, TouchableOpacity, SafeAreaView,
+  TextInput, Alert, ActivityIndicator, Image, Animated, KeyboardAvoidingView, Platform, StatusBar, RefreshControl, Modal, Pressable, Keyboard, Dimensions, Linking
 } from 'react-native';
-import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
-import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera, LogOut, Info, MessageCircle, PenTool } from 'lucide-react-native';
+import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera, LogOut, Info, MessageCircle, PenTool, Trash2 } from 'lucide-react-native';
 import { BiteSyncLogo, BiteSyncMark } from './BiteSyncLogo';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
+import * as ImageManipulator from 'expo-image-manipulator';
 import { validatePasswordStrength, RateLimiter, validateEmail, validateUsername as validateUsernameUtil } from './lib/authUtils';
 
 // --- CONSTANTS & HELPERS ---
 const FOOD_PLACEHOLDER = 'https://images.unsplash.com/photo-1568901346375-23c9450c58cd?w=400&q=80';
+const DIARY_PAGE_SIZE = 30;
+const SCREEN_WIDTH = Dimensions.get('window').width;
+
+const compressImage = async (uri: string): Promise<string> => {
+  try {
+    const result = await ImageManipulator.manipulateAsync(
+      uri,
+      [{ resize: { width: 1200 } }],
+      { compress: 0.8, format: ImageManipulator.SaveFormat.JPEG }
+    );
+    return result.uri;
+  } catch {
+    return uri;
+  }
+};
 const getItemImage = (item: any) => item?.image_url || FOOD_PLACEHOLDER;
 const getRestaurantImage = (rest: any) => rest?.logo_url || FOOD_PLACEHOLDER;
 
@@ -96,6 +111,12 @@ export default function App() {
   const [authError, setAuthError] = useState('');
   const [showPassword, setShowPassword] = useState(false);
   const [showWelcome, setShowWelcome] = useState(false);
+  const [resetPasswordMode, setResetPasswordMode] = useState(false);
+  const [newPassword, setNewPassword] = useState('');
+  const [newPasswordConfirm, setNewPasswordConfirm] = useState('');
+  const [resetLoading, setResetLoading] = useState(false);
+  const [resetError, setResetError] = useState('');
+  const [resetEmailSent, setResetEmailSent] = useState(false);
   const [username, setUsername] = useState('');
   const [selectedItem, setSelectedItem] = useState<any>(null);
   const [fullScreenImage, setFullScreenImage] = useState<string | null>(null);
@@ -112,6 +133,7 @@ export default function App() {
   const [existingReviewCreatedAt, setExistingReviewCreatedAt] = useState<string | null>(null);
   const [showSuccess, setShowSuccess] = useState(false);
   const [showLimit, setShowLimit] = useState(false);
+  const [limitMsg, setLimitMsg] = useState({ title: 'Daily Limit Reached', body: "You've posted 5 reviews today.\nCome back tomorrow for more!" });
   const [showPhotoPicker, setShowPhotoPicker] = useState(false);
   const [reviewStats, setReviewStats] = useState<Record<string, { up: number; total: number }>>({});
   const [refreshing, setRefreshing] = useState(false);
@@ -121,11 +143,23 @@ export default function App() {
   const [profileUsername, setProfileUsername] = useState('');
   const [profileAvatar, setProfileAvatar] = useState(0);
   const [editingUsername, setEditingUsername] = useState(false);
+  const [savingUsername, setSavingUsername] = useState(false);
   const [newUsername, setNewUsername] = useState('');
   const [usernameLastChanged, setUsernameLastChanged] = useState<Date | null>(null);
   const [showAvatarPicker, setShowAvatarPicker] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(false);
   const sidebarAnim = useRef(new Animated.Value(-300)).current;
+  const sidebarOverlayAnim = useRef(new Animated.Value(0)).current;
+  const [deleteConfirmId, setDeleteConfirmId] = useState<string | null>(null);
+  const [editedReviewIds, setEditedReviewIds] = useState<Set<string>>(new Set());
+  // Home dropdown search
+  const [searchDropdownVisible, setSearchDropdownVisible] = useState(false);
+  const [searchHistory, setSearchHistory] = useState<string[]>([]);
+  const [homeSearchText, setHomeSearchText] = useState('');
+  const [homeDropdownRestaurants, setHomeDropdownRestaurants] = useState<any[]>([]);
+  const [homeDropdownDishes, setHomeDropdownDishes] = useState<any[]>([]);
+  const homeSearchInputRef = useRef<TextInput>(null);
+  const mainScrollRef = useRef<ScrollView>(null);
 
   // --- NEW STATE (13 changes) ---
   const [onboardingDone, setOnboardingDone] = useState<boolean | null>(null);
@@ -139,16 +173,19 @@ export default function App() {
   const [menuSearchResults, setMenuSearchResults] = useState<any[]>([]);
   const [reviewStreak, setReviewStreak] = useState(0);
   const [currentTime, setCurrentTime] = useState(Date.now());
+  const [diaryPage, setDiaryPage] = useState(0);
+  const [diaryHasMore, setDiaryHasMore] = useState(false);
+  const [diaryLoadingMore, setDiaryLoadingMore] = useState(false);
 
   const AVATAR_EMOJIS = ['🧑‍🍳', '🦊', '🐼', '🐨', '🐸', '🦁', '🐻', '🐙'];
 
-  // Rate limiter for authentication attempts
-  const authRateLimiter = useRef(new RateLimiter('bitesync_auth_attempts', 5, 900000)).current;
+  // Rate limiter for authentication attempts (5 minutes = 300000ms)
+  const authRateLimiter = useRef(new RateLimiter('bitesync_auth_attempts', 5, 300000)).current;
 
   const getAvatarIndex = (name: string) => {
     // Deterministic hash based on name
     let hash = 0;
-    const n = name || 'Anonymous';
+    const n = name || 'Deleted User';
     for (let i = 0; i < n.length; i++) hash = n.charCodeAt(i) + ((hash << 5) - hash);
     return Math.abs(hash) % AVATAR_EMOJIS.length;
   };
@@ -159,17 +196,24 @@ export default function App() {
   };
 
   const openSidebar = () => {
+    sidebarOverlayAnim.setValue(0);
     setSidebarOpen(true);
-    Animated.timing(sidebarAnim, { toValue: 0, duration: 300, useNativeDriver: true }).start();
+    Animated.parallel([
+      Animated.timing(sidebarAnim, { toValue: 0, duration: 300, useNativeDriver: true }),
+      Animated.timing(sidebarOverlayAnim, { toValue: 1, duration: 300, useNativeDriver: true }),
+    ]).start();
   };
 
   const closeSidebar = () => {
-    Animated.timing(sidebarAnim, { toValue: -300, duration: 250, useNativeDriver: true }).start(() => setSidebarOpen(false));
+    Animated.parallel([
+      Animated.timing(sidebarAnim, { toValue: -300, duration: 250, useNativeDriver: true }),
+      Animated.timing(sidebarOverlayAnim, { toValue: 0, duration: 250, useNativeDriver: true }),
+    ]).start(() => setSidebarOpen(false));
   };
 
   const navigateFromSidebar = (tab: 'home' | 'review' | 'profile') => {
     closeSidebar();
-    setTimeout(() => { setCurrentTab(tab); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); }, 250);
+    setTimeout(() => { setCurrentTab(tab); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }, 250);
   };
 
   const validateUsername = (u: string): string | null => {
@@ -187,7 +231,45 @@ export default function App() {
     setReviewStreak(calcStreak(diaryEntries));
   }, [diaryEntries]);
 
-  // Dish search when in search view
+  // Search history helpers
+  const loadSearchHistory = async () => {
+    try {
+      const raw = await AsyncStorage.getItem('bitesync_search_history');
+      if (raw) setSearchHistory(JSON.parse(raw));
+    } catch {}
+  };
+
+  const saveSearchToHistory = async (term: string) => {
+    try {
+      const trimmed = term.trim();
+      if (!trimmed) return;
+      const existing = searchHistory.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
+      const updated = [trimmed, ...existing].slice(0, 3);
+      setSearchHistory(updated);
+      await AsyncStorage.setItem('bitesync_search_history', JSON.stringify(updated));
+    } catch {}
+  };
+
+  // Live results for home dropdown
+  useEffect(() => {
+    if (homeSearchText.length < 2) {
+      setHomeDropdownRestaurants([]);
+      setHomeDropdownDishes([]);
+      return;
+    }
+    const timer = setTimeout(async () => {
+      try {
+        const [rests, dishes] = await Promise.all([
+          supabase.from('restaurants').select('id, name, logo_url, address, cuisine_type').ilike('name', `%${homeSearchText}%`).limit(5),
+          supabase.from('menu_items').select('id, name, price, image_url, menu_categories!inner(id, name, restaurant_id, restaurants(id, name))').ilike('name', `%${homeSearchText}%`).limit(5),
+        ]);
+        setHomeDropdownRestaurants(rests.data || []);
+        setHomeDropdownDishes(dishes.data || []);
+      } catch {}
+    }, 300);
+    return () => clearTimeout(timer);
+  }, [homeSearchText]);
+
   useEffect(() => {
     if (homeView !== 'search' || searchQuery.length < 2) { setMenuSearchResults([]); return; }
     const timer = setTimeout(async () => {
@@ -227,7 +309,10 @@ export default function App() {
     try {
       const { data: { user } } = await supabase.auth.getUser();
       if (user?.user_metadata?.username) setProfileUsername(user.user_metadata.username);
-      if (typeof user?.user_metadata?.avatar_index === 'number') setProfileAvatar(user.user_metadata.avatar_index);
+      if (typeof user?.user_metadata?.avatar_index === 'number') {
+        setProfileAvatar(user.user_metadata.avatar_index);
+        await supabase.from('users').update({ avatar_url: user.user_metadata.avatar_index.toString() }).eq('id', user.id);
+      }
       if (user?.user_metadata?.username_last_changed) setUsernameLastChanged(new Date(user.user_metadata.username_last_changed));
     } catch (err) { console.error(err); }
   };
@@ -249,7 +334,23 @@ export default function App() {
       }
     });
 
-    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((event, session) => {
+      if (event === 'PASSWORD_RECOVERY') {
+        setResetPasswordMode(true);
+        return;
+      }
+      if (event === 'SIGNED_OUT') {
+        setSession(null);
+        setDiaryEntries([]);
+        setDiaryPage(0);
+        setDiaryHasMore(false);
+        setRestaurants([]);
+        setFavourites([]);
+        setLikedItems([]);
+        setLikedItemDetails([]);
+        setTrendingDishes([]);
+        return;
+      }
       setSession(session);
       if (session) {
         fetchRestaurants();
@@ -260,7 +361,21 @@ export default function App() {
         fetchTrending();
       }
     });
-    return () => subscription.unsubscribe();
+
+    const handleDeepLink = async (url: string) => {
+      const fragment = url.split('#')[1];
+      if (!fragment) return;
+      const params: Record<string, string> = {};
+      fragment.split('&').forEach(p => { const [k, ...rest] = p.split('='); if (k) params[k] = decodeURIComponent(rest.join('=')); });
+      if (params.type === 'recovery' && params.access_token) {
+        await supabase.auth.setSession({ access_token: params.access_token, refresh_token: params.refresh_token || '' });
+      }
+    };
+
+    Linking.getInitialURL().then(url => { if (url) handleDeepLink(url); });
+    const linkSub = Linking.addEventListener('url', ({ url }) => handleDeepLink(url));
+
+    return () => { subscription.unsubscribe(); linkSub.remove(); };
   }, []);
 
   // --- DATA FETCHING ---
@@ -273,7 +388,7 @@ export default function App() {
       const { data: items } = await supabase.from('menu_items').select('id, category_id').in('category_id', catIds);
       if (!items?.length) return;
       const itemIds = items.map((it: any) => it.id);
-      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', itemIds).not('rating_thumbs', 'is', null);
+      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', itemIds).not('rating_thumbs', 'is', null).limit(1000);
       const catToRest: Record<string, string> = {};
       cats.forEach((c: any) => { catToRest[c.id] = c.restaurant_id; });
       const itemToRest: Record<string, string> = {};
@@ -314,7 +429,7 @@ export default function App() {
       const items = data || [];
 
       const statsPromise = items.length > 0
-        ? supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', items.map((it: any) => it.id)).not('rating_thumbs', 'is', null)
+        ? supabase.from('reviews').select('menu_item_id, rating_thumbs').in('menu_item_id', items.map((it: any) => it.id)).not('rating_thumbs', 'is', null).limit(2000)
         : Promise.resolve({ data: [] });
 
       const { data: reviews } = await statsPromise;
@@ -340,26 +455,34 @@ export default function App() {
     finally { setMenuLoading(false); }
   };
 
-  const fetchDiary = async (userId?: string) => {
+  const fetchDiary = async (userId?: string, page = 0, append = false) => {
     const uid = userId ?? session?.user?.id;
     if (!uid) return;
+    if (append) setDiaryLoadingMore(true);
     try {
-      const { data, error } = await supabase
+      const from = page * DIARY_PAGE_SIZE;
+      const to = from + DIARY_PAGE_SIZE - 1;
+      const { data, error, count } = await supabase
         .from('reviews')
         .select(`
-          id, created_at, rating_thumbs, private_note, public_note, photo_url,
+          id, created_at, rating_thumbs, private_note, public_note, photo_url, menu_item_id,
           menu_items (
             name, image_url,
             menu_categories (
               restaurants (name, logo_url)
             )
           )
-        `)
+        `, { count: 'exact' })
         .eq('user_id', uid)
-        .order('created_at', { ascending: false });
+        .order('created_at', { ascending: false })
+        .range(from, to);
       if (error) throw error;
-      setDiaryEntries(data || []);
+      const entries = data || [];
+      setDiaryEntries(prev => append ? [...prev, ...entries] : entries);
+      setDiaryPage(page);
+      setDiaryHasMore(from + entries.length < (count ?? 0));
     } catch (err) { console.error(err); }
+    finally { if (append) setDiaryLoadingMore(false); }
   };
 
   const fetchFavourites = async (userId: string) => {
@@ -424,7 +547,7 @@ export default function App() {
 
   const fetchTrending = async () => {
     try {
-      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').not('rating_thumbs', 'is', null);
+      const { data: revs } = await supabase.from('reviews').select('menu_item_id, rating_thumbs').not('rating_thumbs', 'is', null).order('created_at', { ascending: false }).limit(600);
       if (!revs?.length) return;
       const agg: Record<string, { up: number; total: number }> = {};
       revs.forEach((r: any) => {
@@ -466,8 +589,11 @@ export default function App() {
       Alert.alert('Permission needed', 'Please allow camera access to take a photo.');
       return;
     }
-    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.7 });
-    if (!result.canceled && result.assets?.[0]) setReviewImage(result.assets[0].uri);
+    const result = await ImagePicker.launchCameraAsync({ allowsEditing: true, aspect: [4, 3], quality: 0.8 });
+    if (!result.canceled && result.assets?.[0]) {
+      const compressed = await compressImage(result.assets[0].uri);
+      setReviewImage(compressed);
+    }
   };
 
   const pickFromGallery = async () => {
@@ -481,36 +607,26 @@ export default function App() {
       mediaTypes: ImagePicker.MediaTypeOptions.Images,
       allowsEditing: true,
       aspect: [4, 3],
-      quality: 0.7,
+      quality: 0.8,
     });
-    if (!result.canceled && result.assets?.[0]) setReviewImage(result.assets[0].uri);
+    if (!result.canceled && result.assets?.[0]) {
+      const compressed = await compressImage(result.assets[0].uri);
+      setReviewImage(compressed);
+    }
   };
 
   const uploadReviewImage = async (localUri: string): Promise<string | null> => {
     try {
-      const ext = localUri.split('.').pop()?.split('?')[0]?.toLowerCase() || 'jpg';
-      const contentType = ext === 'png' ? 'image/png' : 'image/jpeg';
-      const filename = `${session!.user.id}-${Date.now()}.${ext}`;
+      const filename = `${session!.user.id}/${Date.now()}.jpg`;
+      const response = await fetch(localUri);
+      const blob = await response.blob();
 
-      // Convert local URI to Blob for Supabase upload (Robust method)
-      const blob: any = await new Promise((resolve, reject) => {
-        const xhr = new XMLHttpRequest();
-        xhr.onload = function () { resolve(xhr.response); };
-        xhr.onerror = function (e) { 
-          console.error('XHR Error:', e);
-          reject(new TypeError("Network request failed")); 
-        };
-        xhr.responseType = "blob";
-        xhr.open("GET", localUri, true);
-        xhr.send(null);
-      });
-
-      const { data, error } = await supabase.storage
+      const { error } = await supabase.storage
         .from('review-photos')
-        .upload(filename, blob, { 
-          contentType,
+        .upload(filename, blob, {
+          contentType: 'image/jpeg',
           cacheControl: '3600',
-          upsert: false 
+          upsert: true
         });
 
       if (error) throw error;
@@ -528,13 +644,59 @@ export default function App() {
     fetchMenu(rest.id);
   };
 
-  const handleDishSearchSelect = (dish: any) => {
+  const handleDishSearchSelect = async (dish: any) => {
     const restId = dish.menu_categories?.restaurant_id;
-    const restObj = restaurants.find((r: any) => r.id === restId);
-    if (restObj) {
-      setSelectedRestaurant(restObj);
-      fetchMenu(restObj.id);
-      openDetailPage(dish);
+    if (!restId) return;
+    let restObj = restaurants.find((r: any) => r.id === restId);
+    if (!restObj) {
+      const { data } = await supabase.from('restaurants').select('*').eq('id', restId).single();
+      restObj = data;
+    }
+    if (!restObj) return;
+    setSelectedRestaurant(restObj);
+    fetchMenu(restObj.id);
+    openDetailPage(dish);
+  };
+
+  const handleForgotPassword = async () => {
+    if (!email.trim()) {
+      setAuthError('Please enter your email to reset password.');
+      return;
+    }
+    const isAllowed = await authRateLimiter.isAllowed();
+    if (!isAllowed) {
+      setAuthError('Too many attempts. Please try again in 5 minutes.');
+      return;
+    }
+    setAuthLoading(true);
+    setAuthError('');
+    try {
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'bitesync://reset-password' });
+      if (error) throw error;
+      setResetEmailSent(true);
+    } catch (err: any) {
+      setAuthError('Failed to send reset email. Please try again.');
+    } finally {
+      setAuthLoading(false);
+    }
+  };
+
+  const handleSetNewPassword = async () => {
+    if (newPassword.length < 8) { setResetError('Password must be at least 8 characters.'); return; }
+    if (newPassword !== newPasswordConfirm) { setResetError('Passwords do not match.'); return; }
+    setResetLoading(true);
+    setResetError('');
+    try {
+      const { error } = await supabase.auth.updateUser({ password: newPassword });
+      if (error) throw error;
+      setResetPasswordMode(false);
+      setNewPassword('');
+      setNewPasswordConfirm('');
+      Alert.alert('Password Updated', 'Your password has been changed. You can now log in.');
+    } catch {
+      setResetError('Failed to update password. Please try again.');
+    } finally {
+      setResetLoading(false);
     }
   };
 
@@ -542,27 +704,14 @@ export default function App() {
     setAuthLoading(true);
     setAuthError('');
     try {
-      // Rate limit authentication attempts
-      const isAllowed = await authRateLimiter.isAllowed();
-      if (!isAllowed) {
-        const remaining = await authRateLimiter.getRemainingAttempts();
-        throw new Error(`Too many attempts. Please try again in 15 minutes. (${remaining} remaining)`);
-      }
-
-      // Validate email
-      const emailValidation = validateEmail(email);
-      if (!emailValidation.isValid) {
-        throw new Error(emailValidation.error);
-      }
-
-      // Validate password strength
-      const passwordValidation = validatePasswordStrength(password);
-      if (!passwordValidation.isValid) {
-        throw new Error(passwordValidation.errors[0] || 'Password does not meet security requirements');
-      }
-
       if (signUp) {
-        // Validate username
+        // --- SIGN UP: validate everything client-side first ---
+        const emailValidation = validateEmail(email);
+        if (!emailValidation.isValid) throw new Error(emailValidation.error);
+
+        const passwordValidation = validatePasswordStrength(password);
+        if (!passwordValidation.isValid) throw new Error(passwordValidation.errors[0] || 'Password does not meet requirements');
+
         const usernameErr = validateUsername(username);
         if (usernameErr) throw new Error(usernameErr);
 
@@ -571,33 +720,28 @@ export default function App() {
           password,
           options: { data: { username: username.trim() } }
         });
-
         if (error) {
           if (error.message.includes('already registered')) {
             throw new Error('This email is already registered. Please sign in instead.');
           }
           throw new Error(error.message || 'Sign up failed. Please try again.');
         }
-
         setProfileUsername(username.trim());
         setShowWelcome(true);
         setTimeout(() => setShowWelcome(false), 3000);
-        // Reset rate limiter on successful signup
-        await authRateLimiter.reset();
       } else {
-        const { error } = await supabase.auth.signInWithPassword({ email, password });
+        // --- SIGN IN: rate limit + let Supabase handle all validation ---
+        const isAllowed = await authRateLimiter.isAllowed();
+        if (!isAllowed) throw new Error('Too many attempts. Please try again in 5 minutes.');
 
-        if (error) {
-          if (error.message.includes('Invalid login') || error.message.includes('invalid')) {
-            throw new Error('Incorrect email or password');
-          }
-          throw new Error(error.message || 'Sign in failed. Please try again.');
-        }
+        if (!email.trim() || !password) throw new Error('Please enter your email and password.');
+
+        const { error } = await supabase.auth.signInWithPassword({ email: email.trim(), password });
+        if (error) throw new Error('Invalid email or password.');
 
         const { data: { user } } = await supabase.auth.getUser();
         if (user?.user_metadata?.username) setProfileUsername(user.user_metadata.username);
         if (user?.user_metadata?.username_last_changed) setUsernameLastChanged(new Date(user.user_metadata.username_last_changed));
-        // Reset rate limiter on successful signin
         await authRateLimiter.reset();
       }
     } catch (error: any) {
@@ -609,9 +753,11 @@ export default function App() {
   };
 
   const saveUsername = async () => {
+    if (savingUsername) return;
     const err = validateUsername(newUsername);
     if (err) { Alert.alert('Invalid Username', err); return; }
     if (!canEditUsername()) { Alert.alert('Too Soon', 'You can only change your username once every 30 days.'); return; }
+    setSavingUsername(true);
     try {
       const now = new Date();
       const { error } = await supabase.auth.updateUser({ data: { username: newUsername.trim(), username_last_changed: now.toISOString() } });
@@ -620,6 +766,19 @@ export default function App() {
       setUsernameLastChanged(now);
       setEditingUsername(false);
     } catch (err: any) { Alert.alert('Error', err.message); }
+    finally { setSavingUsername(false); }
+  };
+
+  const deleteReview = async (reviewId: string) => {
+    try {
+      const { error } = await supabase.from('reviews').delete().eq('id', reviewId);
+      if (error) throw error;
+      // Remove from local diary state immediately
+      setDiaryEntries(prev => prev.filter(e => e.id !== reviewId));
+      setEditedReviewIds(prev => { const s = new Set(prev); s.delete(reviewId); return s; });
+    } catch (err: any) {
+      Alert.alert('Error', 'Could not delete review. Please try again.');
+    }
   };
 
   const closeModal = () => {
@@ -655,7 +814,6 @@ export default function App() {
       return;
     }
     setSubmitting(true);
-    console.log('Submitting review...');
     try {
       let photoUrl: string | null = null;
       if (reviewImage) {
@@ -674,28 +832,72 @@ export default function App() {
       }
 
       if (existingReviewId) {
-        const updates: any = { rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote };
-        if (photoUrl) updates.photo_url = photoUrl;
-        const { error } = await supabase.from('reviews').update(updates).eq('id', existingReviewId);
-        if (error) throw error;
+        // Preserve the existing photo if the user didn't change it
+        const finalPhotoUrl = photoUrl !== null ? photoUrl : (reviewImage?.startsWith('http') ? reviewImage : null);
+        const updates: any = { rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote, photo_url: finalPhotoUrl };
+        const { data: updatedRows, error } = await supabase
+          .from('reviews')
+          .update(updates)
+          .eq('id', existingReviewId)
+          .select('id, rating_thumbs, public_note, private_note, photo_url');
+        if (error) {
+          console.error('Review update error:', error);
+          throw error;
+        }
+        // If 0 rows returned, RLS silently blocked the update
+        if (!updatedRows || updatedRows.length === 0) {
+          console.error('Review update blocked silently — 0 rows updated. Check RLS and auth session.');
+          throw new Error('Could not save your edit. Please sign out and sign in again, then try again.');
+        }
+        console.log('Review updated successfully:', updatedRows[0]);
+        // Sync update to BOTH diary and public item reviews instantly
+        const updatedId = existingReviewId;
+        setDiaryEntries(prev => prev.map(e =>
+          e.id === updatedId
+            ? { ...e, rating_thumbs: ratingThumbs, private_note: privateNote, public_note: publicNote, photo_url: finalPhotoUrl, _edited: true }
+            : e
+        ));
+        setItemReviews(prev => prev.map(r =>
+          r.id === updatedId
+            ? { ...r, rating_thumbs: ratingThumbs, public_note: publicNote, photo_url: finalPhotoUrl }
+            : r
+        ));
+        setEditedReviewIds(prev => new Set(prev).add(updatedId));
+        // Also refresh from DB so the item detail page has confirmed data when user navigates to it
+        const editedEntry = diaryEntries.find(e => e.id === updatedId);
+        if (editedEntry?.menu_item_id) {
+          fetchItemReviews(editedEntry.menu_item_id, 0, false);
+        } else if (detailItem?.id) {
+          fetchItemReviews(detailItem.id, 0, false);
+        }
+        setReviewImage(null);
+        closeModal();
+        setShowSuccess(true);
+        setTimeout(() => setShowSuccess(false), 2500);
+        return; // Skip the insert path and the fetchDiary call below
       } else {
         const now = new Date();
         const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate()).toISOString();
         
         const [totalRes, itemRes] = await Promise.all([
           supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).gte('created_at', todayStart),
-          supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('menu_item_id', selectedItem.id)
+          supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('user_id', session.user.id).eq('menu_item_id', selectedItem.id).gte('created_at', todayStart)
         ]);
 
         const totalToday = totalRes.count ?? 0;
-        const itemTotal = itemRes.count ?? 0;
+        const itemToday = itemRes.count ?? 0;
 
-        if (totalToday >= 5 || itemTotal >= 2) {
+        if (itemToday >= 2) {
           setSubmitting(false);
+          setLimitMsg({ title: 'Already Reviewed Today', body: "You've reviewed this dish twice today.\nCome back tomorrow to review again!" });
           setShowLimit(true);
-          // Set a specific message if it was an item limit
-          const msg = itemTotal >= 2 ? "You've already reviewed this dish twice!" : "You've reached your 5 daily reviews limit.";
-          Alert.alert('Limit Reached', msg); // Using alert too for absolute clarity
+          setTimeout(() => setShowLimit(false), 4000);
+          return;
+        }
+        if (totalToday >= 5) {
+          setSubmitting(false);
+          setLimitMsg({ title: 'Daily Limit Reached', body: "You've posted 5 reviews today.\nCome back tomorrow for more!" });
+          setShowLimit(true);
           setTimeout(() => setShowLimit(false), 4000);
           return;
         }
@@ -718,11 +920,23 @@ export default function App() {
       fetchDiary();
       if (selectedRestaurant) fetchMenu(selectedRestaurant.id);
       if (detailItem) fetchItemReviews(detailItem.id, 0, false);
-    } catch (err: any) { 
-      console.error('Submit Error:', err);
-      Alert.alert('Submission Error', err.message || 'An unexpected error occurred. Please try again.'); 
-    } finally { 
-      setSubmitting(false); 
+    } catch (err: any) {
+      const hint = err?.message || '';
+      if (hint.includes('DAILY_LIMIT_REACHED') || hint.includes('Daily review limit')) {
+        setLimitMsg({ title: 'Daily Limit Reached', body: "You've posted 5 reviews today.\nCome back tomorrow for more!" });
+        setShowLimit(true);
+        setTimeout(() => setShowLimit(false), 4000);
+      } else if (hint.includes('ITEM_LIMIT_REACHED') || hint.includes('Item review limit')) {
+        setLimitMsg({ title: 'Already Reviewed Today', body: "You've reviewed this dish twice today.\nCome back tomorrow to review again!" });
+        setShowLimit(true);
+        setTimeout(() => setShowLimit(false), 4000);
+      } else if (hint.includes('EDIT_WINDOW_EXPIRED') || hint.includes('edit window')) {
+        Alert.alert('Edit Window Closed', 'Reviews can only be edited within 5 minutes of submission.');
+      } else {
+        Alert.alert('Submission Error', 'An unexpected error occurred. Please try again.');
+      }
+    } finally {
+      setSubmitting(false);
     }
   };
 
@@ -757,7 +971,7 @@ export default function App() {
     try {
       const [countResult, dataResult] = await Promise.all([
         supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('menu_item_id', itemId).neq('public_note', ''),
-        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, users(full_name)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
+        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, user_id, users(full_name, avatar_url)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
       ]);
       setReviewTotal(countResult.count || 0);
       if (append) { setItemReviews(prev => [...prev, ...(dataResult.data || [])]); }
@@ -777,9 +991,22 @@ export default function App() {
 
   const priceRange = useMemo(() => getPriceRange(menuItems), [menuItems]);
 
-  // --- LOADING GUARD ---
+  const searchDropOpen = searchDropdownVisible && (homeSearchText.length >= 2 || searchHistory.length > 0);
+
+  // --- SPLASH / LOADING GUARD ---
   if (onboardingDone === null || (loading && !session)) {
-    return <View style={styles.loadingContainer}><ActivityIndicator size="large" color="#00A86B" /></View>;
+    return (
+      <View style={{ flex: 1, backgroundColor: '#0b1220', justifyContent: 'center', alignItems: 'center' }}>
+        <ExpoStatusBar style="light" backgroundColor="#0b1220" translucent={false} />
+        <BiteSyncMark size={110} tileColor="#0b1220" accent="#00A86B" />
+        <Text style={{ color: '#ffffff', fontSize: 34, fontWeight: '800', marginTop: 24, letterSpacing: -0.5 }}>
+          Bite<Text style={{ color: '#00A86B' }}>Sync</Text>
+        </Text>
+        <Text style={{ color: 'rgba(255,255,255,0.35)', fontSize: 14, marginTop: 8, fontWeight: '500', letterSpacing: 0.3 }}>
+          Your personal food memory
+        </Text>
+      </View>
+    );
   }
 
   // --- ONBOARDING SCREEN ---
@@ -791,12 +1018,11 @@ export default function App() {
       setOnboardingDone(true);
     };
     return (
-      <SafeAreaProvider>
-      <SafeAreaView style={[styles.container, { justifyContent: 'space-between' }]} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={[styles.container, { justifyContent: 'space-between' }]}>
         <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
         <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', padding: 40 }}>
           <Text style={{ fontSize: 88, marginBottom: 28 }}>{slide.emoji}</Text>
-          <Text style={{ color: '#111', fontSize: 26, fontWeight: '900', textAlign: 'center', marginBottom: 14, letterSpacing: -0.5 }}>{slide.title}</Text>
+          <Text style={{ color: '#111', fontSize: 26, fontWeight: '800', textAlign: 'center', marginBottom: 14, letterSpacing: -0.5 }}>{slide.title}</Text>
           <Text style={{ color: '#666', fontSize: 16, textAlign: 'center', lineHeight: 26 }}>{slide.desc}</Text>
         </View>
         <View style={{ flexDirection: 'row', justifyContent: 'center', gap: 8, marginBottom: 24 }}>
@@ -815,7 +1041,6 @@ export default function App() {
           )}
         </View>
       </SafeAreaView>
-      </SafeAreaProvider>
     );
   }
 
@@ -834,82 +1059,160 @@ export default function App() {
     setRefreshing(false);
   };
 
+  // --- RESET PASSWORD SCREEN ---
+  if (resetPasswordMode) {
+    return (
+      <SafeAreaView style={styles.container}>
+        <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 28 }} keyboardShouldPersistTaps="handled">
+            <View style={{ alignSelf: 'center', marginBottom: 24 }}>
+              <BiteSyncLogo size={32} textColor="#0b1220" />
+            </View>
+            <Text style={{ fontSize: 24, fontWeight: '800', color: '#111', marginBottom: 6 }}>Set New Password</Text>
+            <Text style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Choose a strong password for your account.</Text>
+            <TextInput
+              style={styles.input}
+              placeholder="New password"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              value={newPassword}
+              onChangeText={t => { setNewPassword(t); setResetError(''); }}
+              autoCapitalize="none"
+            />
+            <TextInput
+              style={[styles.input, { marginTop: 12 }]}
+              placeholder="Confirm new password"
+              placeholderTextColor="#aaa"
+              secureTextEntry
+              value={newPasswordConfirm}
+              onChangeText={t => { setNewPasswordConfirm(t); setResetError(''); }}
+              autoCapitalize="none"
+            />
+            {resetError ? <Text style={{ color: '#EF4444', fontSize: 13, marginTop: 8 }}>{resetError}</Text> : null}
+            <TouchableOpacity
+              onPress={handleSetNewPassword}
+              disabled={resetLoading}
+              style={{ backgroundColor: '#00A86B', borderRadius: 16, paddingVertical: 16, alignItems: 'center', marginTop: 20 }}>
+              {resetLoading
+                ? <ActivityIndicator color="#fff" />
+                : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 16 }}>Update Password</Text>}
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+      </SafeAreaView>
+    );
+  }
+
   // --- AUTH SCREEN ---
   if (!session) {
     return (
-      <SafeAreaProvider>
-      <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+      <SafeAreaView style={styles.container}>
         <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
-        <View style={styles.authContainer}>
-          <View style={{ alignSelf: 'center', marginBottom: 16 }}>
-            <BiteSyncLogo size={32} textColor="#0b1220" />
-          </View>
-          <Text style={styles.authSubtitle}>Your personal food memory, every bite.</Text>
-          {authError ? <Text style={{ color: '#ef4444', marginBottom: 8, fontSize: 13, fontWeight: '600', marginLeft: 4 }}>{authError}</Text> : null}
-          {isSignUp && (
-            <TextInput style={[styles.textInput, { marginBottom: 12 }]} placeholder="Username (e.g. hamza_eats)" placeholderTextColor="#888"
-              value={username} onChangeText={t => { setUsername(t); setAuthError(''); }} autoCapitalize="none" />
-          )}
-          <TextInput style={[styles.textInput, { marginBottom: 12 }]} placeholder="Email address" placeholderTextColor="#888"
-            value={email} onChangeText={t => { setEmail(t); setAuthError(''); }} autoCapitalize="none" keyboardType="email-address" />
-          <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FA', borderRadius: 14, borderWidth: 1, borderColor: '#EAEAEA', paddingRight: 16 }}>
-            <TextInput style={{ flex: 1, color: '#111', fontSize: 16, padding: 15 }} placeholder="Password" placeholderTextColor="#888"
-              value={password} onChangeText={t => { setPassword(t); setAuthError(''); }} secureTextEntry={!showPassword} />
-            <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
-              {showPassword ? <EyeOff color="#888" size={20} /> : <Eye color="#888" size={20} />}
+        <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
+          <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 28 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
+            <View style={{ alignSelf: 'center', marginBottom: 16 }}>
+              <BiteSyncLogo size={32} textColor="#0b1220" />
+            </View>
+            <Text style={styles.authSubtitle}>Your personal food memory, every bite.</Text>
+            {authError ? <Text style={{ color: '#ef4444', marginBottom: 8, fontSize: 13, fontWeight: '600', marginLeft: 4 }}>{authError}</Text> : null}
+            {isSignUp && (
+              <TextInput style={[styles.textInput, { marginBottom: 12 }]} placeholder="Username (e.g. hamza_eats)" placeholderTextColor="#888"
+                value={username} onChangeText={t => { setUsername(t); setAuthError(''); }} autoCapitalize="none" />
+            )}
+            <TextInput style={[styles.textInput, { marginBottom: 12 }]} placeholder="Email address" placeholderTextColor="#888"
+              value={email} onChangeText={t => { setEmail(t); setAuthError(''); }} autoCapitalize="none" keyboardType="email-address" />
+            <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F8F9FA', borderRadius: 14, borderWidth: 1, borderColor: '#EAEAEA', paddingRight: 16 }}>
+              <TextInput style={{ flex: 1, color: '#111', fontSize: 16, padding: 15 }} placeholder="Password" placeholderTextColor="#888"
+                value={password} onChangeText={t => { setPassword(t); setAuthError(''); }} secureTextEntry={!showPassword} />
+              <TouchableOpacity onPress={() => setShowPassword(!showPassword)}>
+                {showPassword ? <EyeOff color="#888" size={20} /> : <Eye color="#888" size={20} />}
+              </TouchableOpacity>
+            </View>
+            {!isSignUp && (
+              <TouchableOpacity onPress={handleForgotPassword} style={{ alignSelf: 'flex-end', marginTop: 12 }} disabled={authLoading}>
+                <Text style={{ color: authLoading ? '#888' : '#00A86B', fontSize: 14, fontWeight: '600' }}>Forgot password?</Text>
+              </TouchableOpacity>
+            )}
+            <TouchableOpacity style={[styles.submitButton, { marginTop: 20 }]} onPress={() => handleAuth(isSignUp)} disabled={authLoading}>
+              {authLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>}
             </TouchableOpacity>
+            <TouchableOpacity style={{ marginTop: 24, padding: 10 }} onPress={() => { setIsSignUp(!isSignUp); setAuthError(''); setEmail(''); setPassword(''); setUsername(''); }} disabled={authLoading}>
+              <Text style={{ color: '#666', textAlign: 'center', fontSize: 14 }}>
+                {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
+                <Text style={{ color: '#00A86B', fontWeight: '700' }}>{isSignUp ? 'Sign In' : 'Create an account'}</Text>
+              </Text>
+            </TouchableOpacity>
+          </ScrollView>
+        </KeyboardAvoidingView>
+
+        <Modal visible={resetEmailSent} transparent animationType="fade">
+          <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+            <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', width: '80%', borderWidth: 1, borderColor: '#DCFCE7', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 16 }}>
+              <View style={{ width: 72, height: 72, borderRadius: 36, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
+                <Text style={{ fontSize: 36 }}>📧</Text>
+              </View>
+              <Text style={{ color: '#111', fontWeight: '800', fontSize: 20, marginBottom: 8, textAlign: 'center' }}>Check your inbox</Text>
+              <Text style={{ color: '#555', fontSize: 14, textAlign: 'center', lineHeight: 21, marginBottom: 6 }}>
+                A password reset link has been sent to your email.
+              </Text>
+              <Text style={{ color: '#00A86B', fontSize: 13, fontWeight: '600', textAlign: 'center', marginBottom: 24 }}>
+                Don't forget to check spam.
+              </Text>
+              <TouchableOpacity
+                onPress={() => setResetEmailSent(false)}
+                style={{ backgroundColor: '#00A86B', borderRadius: 14, paddingVertical: 13, paddingHorizontal: 32 }}>
+                <Text style={{ color: '#fff', fontWeight: '700', fontSize: 15 }}>Got it</Text>
+              </TouchableOpacity>
+            </View>
           </View>
-          <TouchableOpacity style={[styles.submitButton, { marginTop: 20 }]} onPress={() => handleAuth(isSignUp)} disabled={authLoading}>
-            {authLoading ? <ActivityIndicator color="#fff" /> : <Text style={styles.submitButtonText}>{isSignUp ? 'Create Account' : 'Sign In'}</Text>}
-          </TouchableOpacity>
-          <TouchableOpacity style={{ marginTop: 24, padding: 10 }} onPress={() => { setIsSignUp(!isSignUp); setAuthError(''); setUsername(''); }} disabled={authLoading}>
-            <Text style={{ color: '#666', textAlign: 'center', fontSize: 14 }}>
-              {isSignUp ? 'Already have an account? ' : "Don't have an account? "}
-              <Text style={{ color: '#00A86B', fontWeight: '700' }}>{isSignUp ? 'Sign In' : 'Create an account'}</Text>
-            </Text>
-          </TouchableOpacity>
-        </View>
+        </Modal>
+
       </SafeAreaView>
-      </SafeAreaProvider>
     );
   }
 
   // --- MAIN APP ---
   return (
-    <SafeAreaProvider>
-    <SafeAreaView style={styles.container} edges={['top', 'left', 'right']}>
+    <SafeAreaView style={styles.container}>
       <ExpoStatusBar style="dark" backgroundColor="#F8F9FA" translucent={false} />
       {/* HEADER */}
-      <View style={styles.header}>
+      <View style={[styles.header, (detailItem || selectedRestaurant) && { borderBottomWidth: 0 }]}>
         {(selectedRestaurant || (currentTab === 'home' && homeView === 'search')) ? (
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => {
-            if (detailItem) { setDetailItem(null); setItemReviews([]); }
+          if (detailItem) { setDetailItem(null); setItemReviews([]); }
             else if (selectedRestaurant) { setSelectedRestaurant(null); setMenuSearchQuery(''); }
-            else setHomeView('landing');
+            else { setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }
           }}>
             <ArrowLeft color="#111" size={22} style={{ marginRight: 8 }} />
-            <Text style={[styles.headerTitle, { color: '#111', fontSize: 18 }]}>{detailItem ? detailItem.name : selectedRestaurant ? selectedRestaurant.name : 'Search'}</Text>
+            <Text style={[styles.headerTitle, { color: '#111', fontSize: 18 }]}>{detailItem ? selectedRestaurant?.name : selectedRestaurant ? 'Restaurants' : 'Search'}</Text>
           </TouchableOpacity>
         ) : (
           <>
-            <TouchableOpacity onPress={openSidebar}><Menu color="#111" size={24} /></TouchableOpacity>
-            <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); }}>
-              <View style={{ marginLeft: 8 }}>
+            <View style={{ flex: 1 }}>
+              <TouchableOpacity onPress={openSidebar}><Menu color="#111" size={24} /></TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, alignItems: 'center' }}>
+              <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }}>
                 <BiteSyncLogo size={18} textColor="#111" />
-              </View>
-            </TouchableOpacity>
-            <TouchableOpacity onPress={() => setCurrentTab('profile')} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#00A86B' }}>
-              <Text style={{ fontSize: 18 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
-            </TouchableOpacity>
+              </TouchableOpacity>
+            </View>
+            <View style={{ flex: 1, alignItems: 'flex-end' }}>
+              <TouchableOpacity onPress={() => setCurrentTab('profile')} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: '#00A86B' }}>
+                <Text style={{ fontSize: 18 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
+              </TouchableOpacity>
+            </View>
           </>
         )}
       </View>
 
       <ScrollView
+        ref={mainScrollRef}
         contentContainerStyle={styles.scrollContent}
         keyboardShouldPersistTaps="handled"
         overScrollMode="never"
         bounces={true}
+        onScrollBeginDrag={() => { setSearchDropdownVisible(false); Keyboard.dismiss(); }}
         refreshControl={<RefreshControl refreshing={refreshing} onRefresh={onRefresh} tintColor="#00A86B" colors={['#00A86B']} progressBackgroundColor="#fff" />}
       >
         {loading ? (
@@ -918,10 +1221,96 @@ export default function App() {
         ) : currentTab === 'home' && homeView === 'landing' && !selectedRestaurant ? (
           /* ---- HOME LANDING ---- */
           <>
-            <TouchableOpacity style={styles.searchBar} onPress={() => setHomeView('search')}>
-              <Search color="#888" size={18} style={{ marginRight: 10 }} />
-              <Text style={{ color: '#888', flex: 1, fontSize: 15 }}>Search restaurants or dishes...</Text>
-            </TouchableOpacity>
+            {/* HOME SEARCH BAR — connected dropdown */}
+            <View style={{ zIndex: 100, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: searchDropOpen ? '#00A86B' : '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 2, marginBottom: 20, marginHorizontal: -6, overflow: 'hidden' }}>
+              <View style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 8 }}>
+                <Search color={searchDropOpen ? '#00A86B' : '#888'} size={18} style={{ marginRight: 10 }} />
+                <TextInput
+                  ref={homeSearchInputRef}
+                  style={styles.searchInput}
+                  placeholder="Search restaurants & dishes..."
+                  placeholderTextColor="#aaa"
+                  value={homeSearchText}
+                  onChangeText={setHomeSearchText}
+                  onFocus={() => { loadSearchHistory(); setSearchDropdownVisible(true); }}
+                  onBlur={() => setTimeout(() => setSearchDropdownVisible(false), 180)}
+                />
+                {homeSearchText.length > 0 && (
+                  <TouchableOpacity
+                    onPress={() => { setHomeSearchText(''); setHomeDropdownRestaurants([]); setHomeDropdownDishes([]); homeSearchInputRef.current?.focus(); }}
+                    hitSlop={{ top: 12, bottom: 12, left: 12, right: 12 }}
+                    style={{ padding: 8 }}>
+                    <X color="#555" size={18} />
+                  </TouchableOpacity>
+                )}
+              </View>
+
+              {searchDropOpen && (
+                <View style={{ borderTopWidth: 1, borderTopColor: '#F0F0F0' }}>
+                  {homeSearchText.length < 2 ? (
+                    searchHistory.length > 0 ? (
+                      <>
+                        <Text style={{ fontSize: 11, color: '#aaa', fontWeight: '700', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, letterSpacing: 0.8 }}>RECENT SEARCHES</Text>
+                        {searchHistory.map((term, i) => (
+                          <TouchableOpacity key={i} onPress={() => setHomeSearchText(term)}
+                            style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 13, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: '#F5F5F5' }}>
+                            <Clock color="#bbb" size={15} style={{ marginRight: 12 }} />
+                            <Text style={{ color: '#333', fontSize: 14, flex: 1 }}>{term}</Text>
+                            <ChevronRight color="#ddd" size={14} />
+                          </TouchableOpacity>
+                        ))}
+                        <View style={{ height: 8 }} />
+                      </>
+                    ) : null
+                  ) : (
+                    <View>
+                      {homeDropdownRestaurants.length > 0 && (
+                        <>
+                          <Text style={{ fontSize: 11, color: '#aaa', fontWeight: '700', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, letterSpacing: 0.8 }}>RESTAURANTS</Text>
+                          {homeDropdownRestaurants.map((rest, i) => (
+                            <TouchableOpacity key={rest.id}
+                              onPress={() => { saveSearchToHistory(rest.name); setSearchDropdownVisible(false); setHomeSearchText(''); Keyboard.dismiss(); handleRestaurantSelect(rest); }}
+                              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: '#F5F5F5' }}>
+                              {rest.logo_url
+                                ? <Image source={{ uri: rest.logo_url }} style={{ width: 38, height: 38, borderRadius: 10, marginRight: 12 }} />
+                                : <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}><Text style={{ fontSize: 18 }}>🍽️</Text></View>}
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ color: '#111', fontSize: 14, fontWeight: '700' }}>{rest.name}</Text>
+                                <Text style={{ color: '#888', fontSize: 12, marginTop: 1 }}>{rest.address || 'Karachi'}</Text>
+                              </View>
+                              <ChevronRight color="#ccc" size={16} />
+                            </TouchableOpacity>
+                          ))}
+                        </>
+                      )}
+                      {homeDropdownDishes.length > 0 && (
+                        <>
+                          <Text style={{ fontSize: 11, color: '#aaa', fontWeight: '700', paddingHorizontal: 16, paddingTop: 14, paddingBottom: 6, letterSpacing: 0.8, borderTopWidth: homeDropdownRestaurants.length > 0 ? 1 : 0, borderTopColor: '#EAEAEA' }}>DISHES</Text>
+                          {homeDropdownDishes.map((dish, i) => (
+                            <TouchableOpacity key={dish.id}
+                              onPress={() => { saveSearchToHistory(dish.name); setSearchDropdownVisible(false); setHomeSearchText(''); Keyboard.dismiss(); handleDishSearchSelect(dish); }}
+                              style={{ flexDirection: 'row', alignItems: 'center', paddingHorizontal: 16, paddingVertical: 11, borderTopWidth: i > 0 ? 1 : 0, borderTopColor: '#F5F5F5' }}>
+                              {dish.image_url
+                                ? <Image source={{ uri: dish.image_url }} style={{ width: 38, height: 38, borderRadius: 10, marginRight: 12 }} resizeMode="cover" />
+                                : <View style={{ width: 38, height: 38, borderRadius: 10, backgroundColor: '#FFF8F0', justifyContent: 'center', alignItems: 'center', marginRight: 12 }}><Text style={{ fontSize: 18 }}>🥘</Text></View>}
+                              <View style={{ flex: 1 }}>
+                                <Text style={{ color: '#111', fontSize: 14, fontWeight: '700' }}>{dish.name}</Text>
+                                <Text style={{ color: '#888', fontSize: 12, marginTop: 1 }}>at {dish.menu_categories?.restaurants?.name || 'Restaurant'} · PKR {dish.price}</Text>
+                              </View>
+                              <ChevronRight color="#ccc" size={16} />
+                            </TouchableOpacity>
+                          ))}
+                        </>
+                      )}
+                      {homeDropdownRestaurants.length === 0 && homeDropdownDishes.length === 0 && (
+                        <Text style={{ color: '#bbb', textAlign: 'center', padding: 20, fontSize: 14 }}>No results for "{homeSearchText}"</Text>
+                      )}
+                      <View style={{ height: 8 }} />
+                    </View>
+                  )}
+                </View>
+              )}
+            </View>
 
             {/* FAVOURITE DISHES */}
             {likedItemDetails.length > 0 && (
@@ -929,7 +1318,7 @@ export default function App() {
                 <Text style={styles.sectionTitle}>❤️ Your Favourite Dishes</Text>
                 <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20, marginBottom: 28 }}>
                   {likedItemDetails.map(dish => (
-                    <TouchableOpacity key={'liked-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#FECDD3', shadowColor: '#EF4444', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.08, shadowRadius: 6, elevation: 3 }}
+                    <TouchableOpacity key={'liked-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#DCFCE7', shadowColor: '#00A86B', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.10, shadowRadius: 6, elevation: 3 }}
                       onPress={() => handleDishSearchSelect(dish)}>
                       <View style={{ position: 'relative' }}>
                         <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
@@ -941,7 +1330,7 @@ export default function App() {
                         </TouchableOpacity>
                       </View>
                       <View style={{ padding: 10 }}>
-                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{dish.name}</Text>
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>{dish.name}</Text>
                         <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>at {dish.menu_categories?.restaurants?.name || 'Restaurant'}</Text>
                         <Text style={{ color: '#00A86B', fontSize: 12, fontWeight: '700', marginTop: 4 }}>PKR {dish.price}</Text>
                       </View>
@@ -960,13 +1349,18 @@ export default function App() {
               <>
                 <Text style={styles.sectionTitle}>🔥 Trending Dishes</Text>
                 <Text style={{ color: '#666', fontSize: 14, marginBottom: 16, marginTop: -10 }}>Top-rated bites everyone is ordering</Text>
-                <ScrollView horizontal showsHorizontalScrollIndicator={false} style={{ marginHorizontal: -20, paddingHorizontal: 20, marginBottom: 28 }}>
+                <ScrollView
+                  horizontal
+                  showsHorizontalScrollIndicator={false}
+                  style={{ marginHorizontal: -20, marginBottom: 28 }}
+                  contentContainerStyle={{ paddingHorizontal: 20, paddingBottom: 8 }}
+                >
                   {trendingDishes.map(dish => (
-                    <TouchableOpacity key={'td-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, overflow: 'hidden', borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.06, shadowRadius: 6, elevation: 3 }}
+                    <TouchableOpacity key={'td-' + dish.id} style={{ marginRight: 14, width: 150, backgroundColor: '#fff', borderRadius: 16, borderWidth: 1, borderColor: '#EAEAEA', shadowColor: '#000', shadowOffset: { width: 0, height: 3 }, shadowOpacity: 0.10, shadowRadius: 8, elevation: 4 }}
                       onPress={() => handleDishSearchSelect(dish)}>
-                      <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100 }} resizeMode="cover" />
+                      <Image source={{ uri: getItemImage(dish) }} style={{ width: '100%', height: 100, borderTopLeftRadius: 16, borderTopRightRadius: 16 }} resizeMode="cover" />
                       <View style={{ padding: 10 }}>
-                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '800' }} numberOfLines={1}>{dish.name}</Text>
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700' }} numberOfLines={1}>{dish.name}</Text>
                         <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }} numberOfLines={1}>at {dish.menu_categories?.restaurants?.name || 'Restaurant'}</Text>
                         <Text style={{ color: '#00A86B', fontSize: 12, fontWeight: '700', marginTop: 4 }}>PKR {dish.price}</Text>
                       </View>
@@ -990,13 +1384,13 @@ export default function App() {
                       <Image source={{ uri: getRestaurantImage(rest) }} style={{ width: '100%', height: 130, borderRadius: 0 }} resizeMode="cover" />
                       {openStatus !== null && (
                         <View style={{ position: 'absolute', top: 10, left: 10, backgroundColor: openStatus ? '#00A86B' : '#EF4444', paddingHorizontal: 8, paddingVertical: 3, borderRadius: 8 }}>
-                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '800' }}>{openStatus ? '● Open' : '● Closed'}</Text>
+                          <Text style={{ color: '#fff', fontSize: 10, fontWeight: '700' }}>{openStatus ? '● Open' : '● Closed'}</Text>
                         </View>
                       )}
                     </View>
                     <View style={{ padding: 14, width: '100%' }}>
                       <View style={{ flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 4 }}>
-                        <Text style={{ color: '#111', fontSize: 15, fontWeight: '800', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
+                        <Text style={{ color: '#111', fontSize: 15, fontWeight: '700', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
                         {rating && rating.total >= 3 ? (
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 3 }}>
                             <Text style={{ color: '#00A86B', fontSize: 11 }}>★</Text>
@@ -1036,14 +1430,14 @@ export default function App() {
                       <Image source={{ uri: getRestaurantImage(rest) }} style={{ width: '100%', height: 110 }} resizeMode="cover" />
                       {openStatus !== null && (
                         <View style={{ position: 'absolute', bottom: 6, left: 6, backgroundColor: openStatus ? '#00A86B' : '#EF4444', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6 }}>
-                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '800' }}>{openStatus ? '● Open' : '● Closed'}</Text>
+                          <Text style={{ color: '#fff', fontSize: 9, fontWeight: '700' }}>{openStatus ? '● Open' : '● Closed'}</Text>
                         </View>
                       )}
                     </View>
                     <View style={{ padding: 10 }}>
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginBottom: 3 }}>
-                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '800', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
-                        {idx === 0 && <View style={{ backgroundColor: '#00A86B', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 }}><Text style={{ color: '#fff', fontSize: 8, fontWeight: '800' }}>AD</Text></View>}
+                        <Text style={{ color: '#111', fontSize: 13, fontWeight: '700', flex: 1 }} numberOfLines={1}>{rest.name}</Text>
+                        {idx === 0 && <View style={{ backgroundColor: '#00A86B', paddingHorizontal: 5, paddingVertical: 2, borderRadius: 5 }}><Text style={{ color: '#fff', fontSize: 8, fontWeight: '700' }}>AD</Text></View>}
                       </View>
                       {tags.length > 0 && <Text style={{ color: '#888', fontSize: 10, marginBottom: 4 }} numberOfLines={1}>{tags.slice(0, 2).join(' · ')}</Text>}
                       <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
@@ -1065,7 +1459,7 @@ export default function App() {
             detailItem ? (
               /* ITEM DETAIL PAGE */
               <>
-                <Image source={{ uri: getItemImage(detailItem) }} style={{ width: '100%', height: 220, borderRadius: 20, marginBottom: 16 }} resizeMode="cover" />
+                <Image source={{ uri: getItemImage(detailItem) }} style={{ width: SCREEN_WIDTH, marginLeft: -20, marginTop: -20, height: 190, borderBottomLeftRadius: 24, borderBottomRightRadius: 24, marginBottom: 20 }} resizeMode="cover" />
                 <View style={{ flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 4 }}>
                   <Text style={[styles.sectionTitle, { flex: 1, marginBottom: 0 }]}>{detailItem.name}</Text>
                   <TouchableOpacity onPress={() => toggleLikedItem(detailItem.id)} style={{ padding: 6, marginTop: 2 }}>
@@ -1092,7 +1486,7 @@ export default function App() {
                         <View style={{ backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', flexDirection: 'row', alignItems: 'center', gap: 14 }}>
                           <Text style={{ fontSize: 32 }}>🔥</Text>
                           <View style={{ flex: 1 }}>
-                            <Text style={{ color: '#00A86B', fontWeight: '900', fontSize: 20 }}>{score.pct}%</Text>
+                            <Text style={{ color: '#00A86B', fontWeight: '800', fontSize: 20 }}>{score.pct}%</Text>
                             <Text style={{ color: '#16a34a', fontWeight: '600', fontSize: 13 }}>would order this again</Text>
                             <Text style={{ color: '#888', fontSize: 11, marginTop: 2 }}>Based on {score.total} votes</Text>
                           </View>
@@ -1101,7 +1495,7 @@ export default function App() {
                         <View style={{ backgroundColor: '#F0FDF4', padding: 16, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', flexDirection: 'row', alignItems: 'center', gap: 12 }}>
                           <Text style={{ fontSize: 28 }}>✨</Text>
                           <View>
-                            <Text style={{ color: '#00A86B', fontWeight: '800', fontSize: 15 }}>Be the first to review!</Text>
+                            <Text style={{ color: '#00A86B', fontWeight: '700', fontSize: 15 }}>Be the first to review!</Text>
                             <Text style={{ color: '#888', fontSize: 12, marginTop: 2 }}>Your vote shapes what others order</Text>
                           </View>
                         </View>
@@ -1125,59 +1519,30 @@ export default function App() {
                       {itemReviews.map((r: any, idx: number) => (
                         <View key={r.id} style={{ padding: 14, borderTopWidth: idx === 0 ? 0 : 1, borderTopColor: '#EAEAEA' }}>
                           <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10, marginBottom: 8 }}>
-                            <View style={{ width: 28, height: 28, borderRadius: 14, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA' }}>
-                              <Text style={{ fontSize: 16 }}>{AVATAR_EMOJIS[getAvatarIndex(r.users?.full_name)]}</Text>
+                            <View style={{ width: 32, height: 32, borderRadius: 16, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 1.5, borderColor: '#DCFCE7' }}>
+                              <Text style={{ fontSize: 17 }}>{AVATAR_EMOJIS[r.users?.avatar_url && !isNaN(parseInt(r.users.avatar_url)) ? parseInt(r.users.avatar_url) : getAvatarIndex(r.users?.full_name)]}</Text>
                             </View>
-                            <Text style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 15 }}>{r.users?.full_name || 'Anonymous Diner'}</Text>
+                            <Text style={{ color: '#1A1A1A', fontWeight: '700', fontSize: 15 }}>{r.users?.full_name || 'Deleted User'}</Text>
                             {r.rating_thumbs === true ? <ThumbsUp color="#10b981" size={14} /> : r.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={14} /> : null}
                           </View>
                           <View style={{ flexDirection: 'row', gap: 12, alignItems: 'center' }}>
-                            <View style={{ flex: 1, minHeight: 80, justifyContent: 'space-between' }}>
-                              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 22 }}>{r.public_note}</Text>
-                              <Text style={{ color: '#6B7280', fontSize: 11, marginTop: 8, fontWeight: '600' }}>{getRelativeTime(r.created_at)}</Text>
+                            <View style={{ flex: 1 }}>
+                              <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }} numberOfLines={3} ellipsizeMode="tail">{r.public_note}</Text>
+                              <Text style={{ color: '#6B7280', fontSize: 11, marginTop: 6, fontWeight: '600' }}>{getRelativeTime(r.created_at)}</Text>
                             </View>
                             
                             {r.photo_url ? (
                               <TouchableOpacity 
-                                style={{ 
-                                  position: 'relative',
-                                  width: 80, 
-                                  height: 80
-                                }} 
+                                style={{ alignSelf: 'center', width: 80, height: 80 }} 
                                 onPress={() => setFullScreenImage(r.photo_url)}
                               >
-                                {/* The "Stacked/Tilted" background layer */}
-                                <View style={{ 
-                                  position: 'absolute', 
-                                  top: -4, 
-                                  right: -4, 
-                                  width: 80, 
-                                  height: 80, 
-                                  borderRadius: 14, 
-                                  backgroundColor: '#E5E7EB', 
-                                  transform: [{ rotate: '5deg' }],
-                                  borderWidth: 1,
-                                  borderColor: '#DDD'
-                                }} />
-                                
-                                {/* The Main Image */}
-                                <View style={{ 
-                                  width: 80, 
-                                  height: 80, 
-                                  borderRadius: 14, 
-                                  overflow: 'hidden', 
-                                  backgroundColor: '#F3F4F6',
-                                  borderWidth: 1,
-                                  borderColor: '#EEE'
-                                }}>
+                                <View style={{ width: 80, height: 80, borderRadius: 14, overflow: 'hidden', backgroundColor: '#F3F4F6', borderWidth: 1, borderColor: '#EEE' }}>
                                   <Image 
                                     source={{ uri: r.photo_url }} 
                                     style={{ width: '100%', height: '100%' }} 
                                     resizeMode="cover"
                                     blurRadius={2}
                                   />
-                                  {/* Counter Overlay (e.g. if we had more than 1) */}
-                                  {/* For now we just show the zoom icon as requested earlier or a subtle indicator */}
                                   <View style={{ position: 'absolute', bottom: 4, right: 4, backgroundColor: 'rgba(0,0,0,0.5)', borderRadius: 8, padding: 3 }}>
                                     <Search color="#fff" size={10} />
                                   </View>
@@ -1204,35 +1569,56 @@ export default function App() {
             ) : (
               /* MENU LIST */
               <>
-                {/* RESTAURANT INFO BAR */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24, gap: 10 }}>
-                  <View style={{ flex: 1, flexDirection: 'row', flexWrap: 'wrap', gap: 8 }}>
+                {/* HERO IMAGE with overlaid tags */}
+                <View style={{ marginHorizontal: -20, marginTop: -20, marginBottom: 0 }}>
+                  <Image
+                    source={{ uri: getRestaurantImage(selectedRestaurant) }}
+                    style={{ width: SCREEN_WIDTH, height: 180 }}
+                    resizeMode="cover"
+                  />
+                  {/* Bottom-left: price + cuisine tags */}
+                  <View style={{ position: 'absolute', bottom: 10, left: 12, flexDirection: 'row', gap: 6, flexWrap: 'wrap' }}>
                     {priceRange && (
-                      <View style={{ backgroundColor: '#F0FDF4', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
-                        <Text style={{ color: '#00A86B', fontSize: 14, fontWeight: '800' }}>{priceRange}</Text>
+                      <View style={{ backgroundColor: 'rgba(0,0,0,0.52)', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 }}>
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{priceRange}</Text>
                       </View>
                     )}
                     {selectedRestaurant.cuisine_type && (selectedRestaurant.cuisine_type as string).split(',').slice(0, 2).map((c: string) => c.trim()).filter(Boolean).map((c: string) => (
-                      <View key={c} style={{ backgroundColor: '#EFF6FF', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
-                        <Text style={{ color: '#3B82F6', fontSize: 14, fontWeight: '700' }}>{c}</Text>
+                      <View key={c} style={{ backgroundColor: 'rgba(0,0,0,0.52)', paddingHorizontal: 9, paddingVertical: 3, borderRadius: 20 }}>
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '600' }}>{c}</Text>
                       </View>
                     ))}
-                    {(() => {
-                      const open = isOpenNow(selectedRestaurant.opening_hours);
-                      if (open === null) return null;
-                      return (
-                        <View style={{ backgroundColor: open ? '#F0FDF4' : '#FEF2F2', paddingHorizontal: 12, paddingVertical: 6, borderRadius: 20 }}>
-                          <Text style={{ color: open ? '#00A86B' : '#EF4444', fontSize: 14, fontWeight: '800' }}>{open ? '● Open Now' : '● Closed'}</Text>
-                        </View>
-                      );
-                    })()}
                   </View>
-
+                  {/* Bottom-right: open/closed */}
+                  {(() => {
+                    const open = isOpenNow(selectedRestaurant.opening_hours);
+                    if (open === null) return null;
+                    return (
+                      <View style={{ position: 'absolute', bottom: 10, right: 12, backgroundColor: open ? '#00A86B' : '#EF4444', paddingHorizontal: 10, paddingVertical: 4, borderRadius: 20 }}>
+                        <Text style={{ color: '#fff', fontSize: 11, fontWeight: '700' }}>{open ? '● Open Now' : '● Closed'}</Text>
+                      </View>
+                    );
+                  })()}
                 </View>
 
-                <Text style={[styles.sectionTitle, { fontSize: 24, fontWeight: '800', marginBottom: 20 }]}>{currentTab === 'review' ? 'Where are you eating to review?' : 'Where are you eating?'}</Text>
-                {/* Menu search bar */}
-                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8, gap: 8 }}>
+                {/* RESTAURANT INFO — name + rating + address */}
+                <View style={{ backgroundColor: '#fff', marginHorizontal: -20, paddingHorizontal: 20, paddingTop: 14, paddingBottom: 12, borderBottomWidth: 1, borderBottomColor: '#F0F0F0', marginBottom: 20 }}>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginBottom: 4 }}>
+                    <Text style={{ fontSize: 17, fontWeight: '800', color: '#111' }}>{selectedRestaurant.name}</Text>
+                    {restaurantRatings[selectedRestaurant.id] && (
+                      <Text style={{ fontSize: 13, fontWeight: '700', color: '#00A86B' }}>★ {restaurantRatings[selectedRestaurant.id].pct}%</Text>
+                    )}
+                  </View>
+                  {selectedRestaurant.address ? (
+                    <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4 }}>
+                      <Text style={{ color: '#888', fontSize: 12 }}>📍</Text>
+                      <Text style={{ color: '#888', fontSize: 12 }}>{selectedRestaurant.address}</Text>
+                    </View>
+                  ) : null}
+                </View>
+
+                {/* MENU HEADER + SEARCH */}
+                <View style={{ flexDirection: 'row', alignItems: 'center', backgroundColor: '#F3F4F6', borderRadius: 12, paddingHorizontal: 12, paddingVertical: 8, marginBottom: 8, marginTop: 4, gap: 8 }}>
                   <Search size={16} color="#9CA3AF" />
                   <TextInput
                     value={menuSearchQuery}
@@ -1284,7 +1670,7 @@ export default function App() {
                                 {reviewStats[item.id]?.total >= 5 && (
                                   <View style={{ flexDirection: 'row', alignItems: 'center', gap: 4, marginTop: 4 }}>
                                     <View style={{ backgroundColor: '#FEF2F2', paddingHorizontal: 8, paddingVertical: 2, borderRadius: 8 }}>
-                                      <Text style={{ color: '#DC2626', fontSize: 10, fontWeight: '800' }}>🔥 Popular</Text>
+                                      <Text style={{ color: '#DC2626', fontSize: 10, fontWeight: '700' }}>🔥 Popular</Text>
                                     </View>
                                   </View>
                                 )}
@@ -1313,7 +1699,7 @@ export default function App() {
             <>
               <View style={styles.searchBar}>
                 <Search color="#888" size={18} style={{ marginRight: 10 }} />
-                <TextInput style={styles.searchInput} placeholder="Search restaurants or dishes 🤤" placeholderTextColor="#666"
+                <TextInput style={styles.searchInput} placeholder={currentTab === 'review' ? 'Where did you eat? Drop a review 🍽️' : 'Search restaurants...'} placeholderTextColor="#666"
                   value={searchQuery} onChangeText={setSearchQuery} />
                 {searchQuery.length > 0 && (
                   <TouchableOpacity onPress={() => setSearchQuery('')}><X color="#888" size={16} /></TouchableOpacity>
@@ -1349,9 +1735,6 @@ export default function App() {
                           )}
                         </View>
                       </View>
-                      <TouchableOpacity onPress={() => toggleFavourite(rest.id)} style={{ padding: 10 }}>
-                        <Heart color={favourites.includes(rest.id) ? '#EF4444' : '#CCC'} fill={favourites.includes(rest.id) ? '#EF4444' : 'none'} size={18} />
-                      </TouchableOpacity>
                       <ChevronRight color="#555" size={22} style={{ marginRight: 4 }} />
                     </TouchableOpacity>
                   );
@@ -1380,7 +1763,7 @@ export default function App() {
 
         ) : currentTab === 'profile' ? (
           /* ---- PROFILE & DIARY ---- */
-          <>
+          <Pressable onPress={() => { if (showAvatarPicker) setShowAvatarPicker(false); }} style={{ flex: 1 }}>
             <View style={{ alignItems: 'center', marginBottom: 24, marginTop: 10 }}>
               <TouchableOpacity onPress={() => setShowAvatarPicker(!showAvatarPicker)} style={{ position: 'relative' }}>
                 <View style={{ width: 90, height: 90, borderRadius: 45, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', borderWidth: 3, borderColor: '#00A86B', marginBottom: 6 }}>
@@ -1395,7 +1778,7 @@ export default function App() {
                 <View style={{ flexDirection: 'row', flexWrap: 'wrap', justifyContent: 'center', gap: 10, marginTop: 12, backgroundColor: '#fff', padding: 16, borderRadius: 18, borderWidth: 1, borderColor: '#EAEAEA', width: '100%' }}>
                   <Text style={{ width: '100%', textAlign: 'center', color: '#666', fontSize: 12, fontWeight: '600', marginBottom: 4 }}>Choose your avatar</Text>
                   {AVATAR_EMOJIS.map((emoji, idx) => (
-                    <TouchableOpacity key={idx} onPress={async () => { setProfileAvatar(idx); setShowAvatarPicker(false); await supabase.auth.updateUser({ data: { avatar_index: idx } }); }}
+                    <TouchableOpacity key={idx} onPress={async () => { setProfileAvatar(idx); setShowAvatarPicker(false); await supabase.auth.updateUser({ data: { avatar_index: idx } }); await supabase.from('users').update({ avatar_url: idx.toString() }).eq('id', session?.user?.id); }}
                       style={{ width: 54, height: 54, borderRadius: 27, backgroundColor: profileAvatar === idx ? '#F0FDF4' : '#F8F9FA', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: profileAvatar === idx ? '#00A86B' : '#EAEAEA' }}>
                       <Text style={{ fontSize: 28 }}>{emoji}</Text>
                     </TouchableOpacity>
@@ -1405,7 +1788,7 @@ export default function App() {
 
               {!editingUsername ? (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12 }}>
-                  <Text style={{ color: '#111', fontSize: 20, fontWeight: '900' }}>{profileUsername || 'Set a username'}</Text>
+                  <Text style={{ color: '#111', fontSize: 20, fontWeight: '800' }}>{profileUsername || 'Set a username'}</Text>
                   <TouchableOpacity onPress={() => {
                     if (!canEditUsername()) { Alert.alert('Too Soon', 'You can only change your username once every 30 days.'); return; }
                     setNewUsername(profileUsername); setEditingUsername(true);
@@ -1416,8 +1799,8 @@ export default function App() {
               ) : (
                 <View style={{ flexDirection: 'row', alignItems: 'center', gap: 8, marginTop: 12, width: '80%' }}>
                   <TextInput style={[styles.textInput, { flex: 1, padding: 10, fontSize: 15 }]} value={newUsername} onChangeText={setNewUsername} autoFocus autoCapitalize="none" />
-                  <TouchableOpacity onPress={saveUsername} style={{ backgroundColor: '#00A86B', padding: 10, borderRadius: 10 }}>
-                    <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Save</Text>
+                  <TouchableOpacity onPress={saveUsername} style={{ backgroundColor: '#00A86B', padding: 10, borderRadius: 10 }} disabled={savingUsername}>
+                    {savingUsername ? <ActivityIndicator color="#fff" size="small" /> : <Text style={{ color: '#fff', fontWeight: '700', fontSize: 13 }}>Save</Text>}
                   </TouchableOpacity>
                   <TouchableOpacity onPress={() => setEditingUsername(false)}><X color="#888" size={20} /></TouchableOpacity>
                 </View>
@@ -1429,7 +1812,7 @@ export default function App() {
               {reviewStreak > 0 && (
                 <View style={{ flexDirection: 'row', alignItems: 'center', marginTop: 8, backgroundColor: '#FFF7ED', paddingHorizontal: 14, paddingVertical: 6, borderRadius: 20, borderWidth: 1, borderColor: '#FED7AA', gap: 6 }}>
                   <Text style={{ fontSize: 16 }}>🔥</Text>
-                  <Text style={{ color: '#EA580C', fontWeight: '800', fontSize: 14 }}>{reviewStreak} day streak!</Text>
+                  <Text style={{ color: '#EA580C', fontWeight: '700', fontSize: 14 }}>{reviewStreak} day streak!</Text>
                 </View>
               )}
 
@@ -1457,7 +1840,15 @@ export default function App() {
                 groups[restName].push(entry);
                 return groups;
               }, {});
-              const filteredRestNames = Object.keys(grouped).filter(name => name.toLowerCase().includes(diarySearchQuery.toLowerCase()));
+              const q = diarySearchQuery.toLowerCase();
+              const filteredRestNames = Object.keys(grouped).filter(name =>
+                name.toLowerCase().includes(q) ||
+                grouped[name].some((e: any) =>
+                  e.menu_items?.name?.toLowerCase().includes(q) ||
+                  e.private_note?.toLowerCase().includes(q) ||
+                  e.public_note?.toLowerCase().includes(q)
+                )
+              );
               if (filteredRestNames.length === 0) return <Text style={styles.emptyText}>No diary entries match "{diarySearchQuery}"</Text>;
 
               return filteredRestNames.map((restName: string) => {
@@ -1491,9 +1882,14 @@ export default function App() {
                             <Image source={{ uri: entry.menu_items.image_url }} style={{ width: 44, height: 44, borderRadius: 10, marginRight: 10 }} resizeMode="cover" />
                           ) : null}
                           <View style={{ flex: 1 }}>
-                            <Text style={styles.diaryItemName}>{entry.menu_items?.name || 'Unknown Item'}</Text>
+                            <View style={{ flexDirection: 'row', alignItems: 'center', gap: 6, flexWrap: 'wrap' }}>
+                              <Text style={styles.diaryItemName}>{entry.menu_items?.name || 'Unknown Item'}</Text>
+                              {(entry._edited || editedReviewIds.has(entry.id)) && (
+                                <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', backgroundColor: '#F0FDF4', paddingHorizontal: 6, paddingVertical: 2, borderRadius: 6, overflow: 'hidden' }}>edited</Text>
+                              )}
+                            </View>
                           </View>
-                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 12 }}>
+                          <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
                             {(() => {
                               const minsElapsed = (Date.now() - new Date(entry.created_at).getTime()) / 60000;
                               if (minsElapsed <= 5) {
@@ -1505,6 +1901,9 @@ export default function App() {
                               }
                               return null;
                             })()}
+                            <TouchableOpacity onPress={() => setDeleteConfirmId(entry.id)} style={{ padding: 4 }}>
+                              <Trash2 color="#ef4444" size={16} />
+                            </TouchableOpacity>
                             {entry.rating_thumbs === true ? <ThumbsUp color="#10b981" size={18} /> :
                               entry.rating_thumbs === false ? <ThumbsDown color="#ef4444" size={18} /> : null}
                           </View>
@@ -1569,12 +1968,24 @@ export default function App() {
                 );
               });
             })()}
-          </>
+
+            {diaryHasMore && (
+              <TouchableOpacity
+                onPress={() => fetchDiary(undefined, diaryPage + 1, true)}
+                disabled={diaryLoadingMore}
+                style={{ marginTop: 8, marginBottom: 24, padding: 14, borderRadius: 16, borderWidth: 1, borderColor: '#DCFCE7', backgroundColor: '#F0FDF4', alignItems: 'center' }}
+              >
+                {diaryLoadingMore
+                  ? <ActivityIndicator color="#00A86B" />
+                  : <Text style={{ color: '#00A86B', fontWeight: '700', fontSize: 14 }}>Load More Entries</Text>}
+              </TouchableOpacity>
+            )}
+          </Pressable>
         ) : null}
       </ScrollView>
 
       {/* STICKY RATE BUTTON */}
-      {detailItem && !selectedItem && (
+      {detailItem && !selectedItem && currentTab !== 'profile' && (
         <View style={{ position: 'absolute', bottom: 90, left: 20, right: 20, zIndex: 99 }}>
           <TouchableOpacity style={styles.submitButton} onPress={() => openReviewModal(detailItem)}>
             <Text style={styles.submitButtonText}>Would you order this again? 🍽️</Text>
@@ -1582,30 +1993,19 @@ export default function App() {
         </View>
       )}
 
-      {/* SUCCESS TOAST */}
-      {showSuccess && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
-            <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
-            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
-          </View>
-        </View>
-      )}
-
       {/* BOTTOM NAV */}
       {!selectedItem && (
         <View style={styles.bottomNav}>
-          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); }}>
-            <Home color={currentTab === 'home' ? '#00A86B' : '#888'} size={24} />
+          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); mainScrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
+            <Home color={currentTab === 'home' ? '#00A86B' : '#bbb'} size={20} />
             <Text style={[styles.navText, currentTab === 'home' && styles.navTextActive]}>Home</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('review'); setSelectedRestaurant(null); setDetailItem(null); }}>
-            <PlusCircle color={currentTab === 'review' ? '#00A86B' : '#888'} size={24} />
+          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('review'); setSelectedRestaurant(null); setDetailItem(null); setSearchQuery(''); setMenuSearchResults([]); mainScrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
+            <PlusCircle color={currentTab === 'review' ? '#00A86B' : '#bbb'} size={20} />
             <Text style={[styles.navText, currentTab === 'review' && styles.navTextActive]}>Review</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.navItem} onPress={() => setCurrentTab('profile')}>
-            <User color={currentTab === 'profile' ? '#00A86B' : '#888'} size={24} />
+          <TouchableOpacity style={styles.navItem} onPress={() => { setCurrentTab('profile'); mainScrollRef.current?.scrollTo({ y: 0, animated: true }); }}>
+            <User color={currentTab === 'profile' ? '#00A86B' : '#bbb'} size={20} />
             <Text style={[styles.navText, currentTab === 'profile' && styles.navTextActive]}>Profile</Text>
           </TouchableOpacity>
         </View>
@@ -1623,19 +2023,16 @@ export default function App() {
             </View>
 
             {/* Header */}
-            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 16 }}>
-              <View>
-                <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 2 }}>
-                  {existingReviewId ? 'Editing Recent Review' : 'New Review'}
-                </Text>
-                <Text style={{ fontSize: 20, fontWeight: '800', color: '#111' }} numberOfLines={1}>{selectedItem.name}</Text>
-              </View>
+            <View style={{ flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingHorizontal: 24, paddingTop: 12, paddingBottom: 12 }}>
+              <Text style={{ fontSize: 11, color: '#00A86B', fontWeight: '700', textTransform: 'uppercase', letterSpacing: 1 }}>
+                {existingReviewId ? 'Editing Recent Review' : 'New Review'}
+              </Text>
               <TouchableOpacity onPress={closeModal} style={{ width: 36, height: 36, borderRadius: 18, backgroundColor: '#F3F4F6', justifyContent: 'center', alignItems: 'center' }}>
                 <X color="#555" size={18} />
               </TouchableOpacity>
             </View>
 
-            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: 40 }}>
+            <ScrollView showsVerticalScrollIndicator={false} keyboardShouldPersistTaps="handled" contentContainerStyle={{ paddingHorizontal: 24, paddingBottom: Platform.OS === 'android' ? 80 : 40 }}>
 
               {/* Edit window banner */}
               {existingReviewId && (() => {
@@ -1653,6 +2050,9 @@ export default function App() {
                   </View>
                 );
               })()}
+
+              {/* Item name — heading for the image */}
+              <Text style={{ fontSize: 20, fontWeight: '700', color: '#111', marginBottom: 10 }} numberOfLines={2}>{selectedItem.name}</Text>
 
               {/* Dish image — no add photo button here anymore */}
               <View style={{ marginBottom: 20 }}>
@@ -1690,12 +2090,13 @@ export default function App() {
               <View style={{ marginBottom: 16 }}>
                 <Text style={{ fontSize: 13, fontWeight: '700', color: '#555', textTransform: 'uppercase', letterSpacing: 0.8, marginBottom: 8 }}>Message to Chef</Text>
                 <TextInput
-                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top' }}
+                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top', outlineColor: '#00A86B' }}
                   placeholder="e.g. The chef nailed the spices today!"
                   placeholderTextColor="#BBB"
                   value={publicNote}
                   onChangeText={setPublicNote}
                   multiline
+                  maxLength={500}
                 />
               </View>
 
@@ -1706,12 +2107,13 @@ export default function App() {
                   <Text style={{ fontSize: 13 }}>🔒</Text>
                 </View>
                 <TextInput
-                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top' }}
+                  style={{ backgroundColor: '#FAFAFA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 14, fontSize: 15, minHeight: 80, textAlignVertical: 'top', outlineColor: '#00A86B' }}
                   placeholder="A note to your future self..."
                   placeholderTextColor="#BBB"
                   value={privateNote}
                   onChangeText={setPrivateNote}
                   multiline
+                  maxLength={1000}
                 />
               </View>
 
@@ -1724,7 +2126,7 @@ export default function App() {
                       onPress={() => setShowPhotoPicker(true)}
                       style={{ flex: 1, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, paddingVertical: 16, borderRadius: 18, borderWidth: 2, borderColor: '#00A86B', backgroundColor: '#F0FDF4' }}>
                       <Camera color="#00A86B" size={20} />
-                      <Text style={{ color: '#00A86B', fontSize: 15, fontWeight: '800' }}>Change Photo</Text>
+                      <Text style={{ color: '#00A86B', fontSize: 15, fontWeight: '700' }}>Change Photo</Text>
                     </TouchableOpacity>
                     <TouchableOpacity
                       onPress={() => setReviewImage(null)}
@@ -1782,7 +2184,7 @@ export default function App() {
                 disabled={submitting}>
                 {submitting ? <ActivityIndicator color="#fff" /> : (
                   <>
-                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '800', letterSpacing: 0.3 }}>
+                    <Text style={{ color: '#fff', fontSize: 16, fontWeight: '700', letterSpacing: 0.3 }}>
                       {existingReviewId ? 'Update Review' : publicNote ? 'Send to Chef & Save' : 'Save to Diary'}
                     </Text>
                     <Send color="#fff" size={18} />
@@ -1800,7 +2202,7 @@ export default function App() {
         <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 999, backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
             <Text style={{ fontSize: 56, marginBottom: 14 }}>🥳</Text>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 22, marginBottom: 6 }}>Welcome!</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Welcome!</Text>
             <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your account is created.{'\n'}Let's start reviewing.</Text>
           </View>
         </View>
@@ -1808,24 +2210,24 @@ export default function App() {
 
       {/* SIDEBAR DRAWER */}
       {sidebarOpen && (
-        <TouchableOpacity style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', zIndex: 200 }} activeOpacity={1} onPress={closeSidebar}>
-          <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 290, backgroundColor: '#FAFAFA', zIndex: 201, transform: [{ translateX: sidebarAnim }], shadowColor: '#000', shadowOffset: { width: 10, height: 0 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 25, borderTopRightRadius: 30, borderBottomRightRadius: 30, overflow: 'hidden' }}>
-            <View style={{ backgroundColor: '#00A86B', paddingTop: Platform.OS === 'web' ? 30 : 50, paddingBottom: 24, paddingHorizontal: 24, borderBottomLeftRadius: 30 }}>
-              <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 24 }}>
-                <BiteSyncLogo size={22} textColor="#ffffff" />
-              </View>
+        <Animated.View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, zIndex: 200, elevation: 100, opacity: sidebarOverlayAnim, backgroundColor: 'rgba(0,0,0,0.5)' }}>
+          <TouchableOpacity style={{ flex: 1 }} activeOpacity={1} onPress={closeSidebar} />
+          <Animated.View style={{ position: 'absolute', top: 0, left: 0, bottom: 0, width: 290, backgroundColor: '#FAFAFA', zIndex: 201, transform: [{ translateX: sidebarAnim }], shadowColor: '#000', shadowOffset: { width: 10, height: 0 }, shadowOpacity: 0.15, shadowRadius: 20, elevation: 25, borderTopRightRadius: 30, borderBottomRightRadius: 30 }}>
+          {/* PROFILE HEADER — top left, no logo here */}
+            <View style={{ backgroundColor: '#00A86B', paddingTop: Platform.OS === 'web' ? 28 : 52, paddingBottom: 24, paddingHorizontal: 24, borderBottomLeftRadius: 30 }}>
               <View style={{ flexDirection: 'row', alignItems: 'center' }}>
-                <View style={{ width: 50, height: 50, borderRadius: 25, backgroundColor: '#fff', justifyContent: 'center', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 8 }}>
-                  <Text style={{ fontSize: 26 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
+                <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: 'rgba(255,255,255,0.2)', justifyContent: 'center', alignItems: 'center', borderWidth: 2, borderColor: 'rgba(255,255,255,0.5)', marginRight: 14 }}>
+                  <Text style={{ fontSize: 28 }}>{AVATAR_EMOJIS[profileAvatar]}</Text>
                 </View>
-                <View style={{ marginLeft: 14 }}>
-                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800' }}>{profileUsername || 'Foodie'}</Text>
-                  <Text style={{ color: 'rgba(255,255,255,0.8)', fontSize: 13, marginTop: 2, fontWeight: '500' }}>{diaryEntries.length} bites tracked 🍽️</Text>
+                <View style={{ flex: 1 }}>
+                  <Text style={{ color: '#fff', fontSize: 18, fontWeight: '800', letterSpacing: 0.2 }}>{profileUsername || 'Foodie'}</Text>
+                  <Text style={{ color: 'rgba(255,255,255,0.85)', fontSize: 12, marginTop: 3, fontWeight: '500' }}>{diaryEntries.length} bites tracked 🍽️</Text>
                   {reviewStreak > 0 && <Text style={{ color: '#FCD34D', fontSize: 12, marginTop: 4, fontWeight: '700' }}>🔥 {reviewStreak} day streak</Text>}
                 </View>
               </View>
             </View>
-            
+
+            {/* NAV LINKS */}
             <View style={{ padding: 20, flex: 1, backgroundColor: '#fff' }}>
               {[
                 { label: 'Home', icon: Home, tab: 'home' as const },
@@ -1838,9 +2240,9 @@ export default function App() {
                   <Text style={{ fontSize: 17, fontWeight: currentTab === tab ? '800' : '600', color: currentTab === tab ? '#00A86B' : '#444' }}>{label}</Text>
                 </TouchableOpacity>
               ))}
-              
+
               <View style={{ height: 1, backgroundColor: '#F0F0F0', marginVertical: 20, marginHorizontal: 10 }} />
-              
+
               <TouchableOpacity onPress={closeSidebar} style={{ flexDirection: 'row', alignItems: 'center', gap: 16, padding: 16, borderRadius: 16, marginBottom: 4 }}>
                 <Info color="#888" size={24} />
                 <View>
@@ -1857,17 +2259,57 @@ export default function App() {
               </TouchableOpacity>
             </View>
 
-            <View style={{ backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 40 }}>
+            {/* SIGN OUT + BRANDING FOOTER */}
+            <View style={{ backgroundColor: '#fff', paddingHorizontal: 20, paddingBottom: 24, paddingTop: 4 }}>
               <TouchableOpacity
                 onPress={() => { closeSidebar(); setTimeout(() => { supabase.auth.signOut(); setEmail(''); setPassword(''); setAuthError(''); setProfileUsername(''); setFavourites([]); setLikedItems([]); setLikedItemDetails([]); setTrendingDishes([]); setDiaryEntries([]); }, 300); }}
-                style={{ padding: 16, backgroundColor: '#FEF2F2', borderRadius: 16, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 12, borderWidth: 1, borderColor: '#FECACA' }}>
-                <LogOut color="#DC2626" size={20} />
-                <Text style={{ color: '#DC2626', fontWeight: '800', fontSize: 16 }}>Sign Out</Text>
+                style={{ paddingVertical: 11, paddingHorizontal: 20, backgroundColor: '#FEF2F2', borderRadius: 14, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: 10, borderWidth: 1, borderColor: '#FECACA', marginBottom: 16 }}>
+                <LogOut color="#DC2626" size={17} />
+                <Text style={{ color: '#DC2626', fontWeight: '700', fontSize: 14 }}>Sign Out</Text>
               </TouchableOpacity>
+
+              {/* Standalone branding — full visibility */}
+              <View style={{ alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 14 }}>
+                <BiteSyncLogo size={18} textColor="#00A86B" />
+              </View>
             </View>
           </Animated.View>
-        </TouchableOpacity>
+        </Animated.View>
       )}
+
+      {/* DELETE REVIEW CONFIRM MODAL */}
+      {deleteConfirmId && (
+        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.45)', zIndex: 999, justifyContent: 'center', alignItems: 'center' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 28, marginHorizontal: 28, width: '85%', shadowColor: '#000', shadowOpacity: 0.12, shadowRadius: 24, elevation: 20 }}>
+            <View style={{ width: 56, height: 56, borderRadius: 28, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', alignSelf: 'center', marginBottom: 16 }}>
+              <Trash2 color="#DC2626" size={26} />
+            </View>
+            <Text style={{ fontSize: 20, fontWeight: '800', color: '#111', textAlign: 'center', marginBottom: 8 }}>Delete Review?</Text>
+            <Text style={{ fontSize: 14, color: '#666', textAlign: 'center', lineHeight: 22, marginBottom: 28 }}>This will permanently remove your review and all its data. This cannot be undone.</Text>
+            <TouchableOpacity
+              onPress={() => { deleteReview(deleteConfirmId); setDeleteConfirmId(null); }}
+              style={{ backgroundColor: '#DC2626', borderRadius: 16, paddingVertical: 15, alignItems: 'center', marginBottom: 10 }}>
+              <Text style={{ color: '#fff', fontWeight: '800', fontSize: 16 }}>Yes, Delete</Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setDeleteConfirmId(null)}
+              style={{ backgroundColor: '#F8F9FA', borderRadius: 16, paddingVertical: 15, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA' }}>
+              <Text style={{ color: '#444', fontWeight: '700', fontSize: 16 }}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {/* SUCCESS TOAST */}
+      <Modal visible={showSuccess} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
+          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 36, alignItems: 'center', borderWidth: 1, borderColor: '#EAEAEA', width: '75%', shadowColor: '#000', shadowOpacity: 0.1, shadowRadius: 10 }}>
+            <Text style={{ fontSize: 56, marginBottom: 14 }}>🎉</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 22, marginBottom: 6 }}>Saved!</Text>
+            <Text style={{ color: '#666', fontSize: 14, textAlign: 'center', lineHeight: 20 }}>Your bite is in the diary.{'\n'}Chef has been notified.</Text>
+          </View>
+        </View>
+      </Modal>
+
       {/* FULL SCREEN IMAGE LIGHTBOX (Refined for 'Mid-Screen Window' feel) */}
       <Modal visible={!!fullScreenImage} transparent={true} animationType="fade">
         <TouchableOpacity 
@@ -1893,58 +2335,44 @@ export default function App() {
         </TouchableOpacity>
       </Modal>
 
-      {/* SUCCESS TOAST */}
-      {showSuccess && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.4)' }}>
-          <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#00A86B', width: '70%', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, elevation: 10 }}>
-            <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
-              <Text style={{ fontSize: 32 }}>✅</Text>
-            </View>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 20, marginBottom: 4 }}>Review Saved!</Text>
-            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>Your bite has been recorded in your food diary.</Text>
-          </View>
-        </View>
-      )}
-
       {/* LIMIT REACHED TOAST */}
-      {showLimit && (
-        <View style={{ position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, justifyContent: 'center', alignItems: 'center', zIndex: 1000, backgroundColor: 'rgba(0,0,0,0.4)' }}>
+      <Modal visible={showLimit} transparent animationType="fade">
+        <View style={{ flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: 'rgba(0,0,0,0.4)' }}>
           <View style={{ backgroundColor: '#fff', borderRadius: 28, padding: 30, alignItems: 'center', borderWidth: 1, borderColor: '#EF4444', width: '75%', shadowColor: '#000', shadowOpacity: 0.15, shadowRadius: 15, elevation: 10 }}>
             <View style={{ width: 64, height: 64, borderRadius: 32, backgroundColor: '#FEF2F2', justifyContent: 'center', alignItems: 'center', marginBottom: 16 }}>
               <Text style={{ fontSize: 32 }}>🛑</Text>
             </View>
-            <Text style={{ color: '#111', fontWeight: '900', fontSize: 20, marginBottom: 4 }}>Daily Limit Reached</Text>
-            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>You've posted 5 reviews today. {'\n'}Come back tomorrow for more!</Text>
+            <Text style={{ color: '#111', fontWeight: '800', fontSize: 20, marginBottom: 4 }}>{limitMsg.title}</Text>
+            <Text style={{ color: '#666', fontSize: 13, textAlign: 'center', lineHeight: 18 }}>{limitMsg.body}</Text>
             <TouchableOpacity onPress={() => setShowLimit(false)} style={{ marginTop: 20, backgroundColor: '#EF4444', paddingHorizontal: 20, paddingVertical: 10, borderRadius: 12 }}>
               <Text style={{ color: '#fff', fontWeight: '700', fontSize: 14 }}>Got it!</Text>
             </TouchableOpacity>
           </View>
         </View>
-      )}
+      </Modal>
 
     </SafeAreaView>
-    </SafeAreaProvider>
   );
 }
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#F8F9FA' },
+  container: { flex: 1, backgroundColor: '#F8F9FA', paddingTop: Platform.OS === 'android' ? StatusBar.currentHeight ?? 0 : 0 },
   loadingContainer: { flex: 1, backgroundColor: '#F8F9FA', justifyContent: 'center', alignItems: 'center' },
 
   authContainer: { flex: 1, justifyContent: 'center', padding: 28 },
-  authTitle: { color: '#1A1A1A', fontSize: 38, fontWeight: '800', textAlign: 'center', marginBottom: 8, letterSpacing: -0.5 },
+  authTitle: { color: '#1A1A1A', fontSize: 38, fontWeight: '700', textAlign: 'center', marginBottom: 8, letterSpacing: -0.5 },
   authSubtitle: { color: '#4B5563', fontSize: 16, textAlign: 'center', marginBottom: 40 },
 
-  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 14, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
-  headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '800' },
+  header: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', paddingHorizontal: 20, paddingVertical: 12, backgroundColor: '#fff', borderBottomWidth: 1, borderBottomColor: '#EAEAEA' },
+  headerTitle: { color: '#00A86B', fontSize: 21, fontWeight: '700' },
 
-  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 12, marginBottom: 20, borderWidth: 1, borderColor: '#EAEAEA' },
+  searchBar: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', borderRadius: 16, paddingHorizontal: 16, paddingVertical: 8, marginBottom: 20, marginHorizontal: -6, borderWidth: 1, borderColor: '#EAEAEA' },
   searchInput: { flex: 1, color: '#1A1A1A', fontSize: 15 },
 
   scrollContent: { padding: 20, paddingBottom: 180 },
-  sectionTitle: { color: '#1A1A1A', fontSize: 22, fontWeight: '800', marginBottom: 16 },
+  sectionTitle: { color: '#1A1A1A', fontSize: 22, fontWeight: '700', marginBottom: 16 },
   emptyText: { color: '#6B7280', fontSize: 15, textAlign: 'center', marginTop: 60 },
-  categoryHeader: { color: '#00A86B', fontSize: 12, fontWeight: '800', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 18, marginBottom: 10, paddingLeft: 2 },
+  categoryHeader: { color: '#00A86B', fontSize: 12, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.8, marginTop: 18, marginBottom: 10, paddingLeft: 2 },
 
   restaurantCard: { flexDirection: 'row', alignItems: 'center', backgroundColor: '#fff', padding: 18, borderRadius: 20, marginBottom: 16, borderWidth: 1, borderColor: '#F3F4F6' },
   restaurantIcon: { width: 56, height: 56, borderRadius: 16, backgroundColor: '#F0FDF4', justifyContent: 'center', alignItems: 'center', marginRight: 16 },
@@ -1967,10 +2395,10 @@ const styles = StyleSheet.create({
   privateNoteText: { color: '#00A86B', fontSize: 14, lineHeight: 20 },
   publicNoteText: { color: '#374151', fontSize: 14, lineHeight: 22 },
 
-  bottomNav: { flexDirection: 'row', position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#EAEAEA', paddingVertical: 12, paddingBottom: 28, shadowColor: '#000', shadowOffset: { width: 0, height: -2 }, shadowOpacity: 0.05, shadowRadius: 8, elevation: 10 },
-  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center' },
-  navText: { color: '#888', fontSize: 11, marginTop: 4, fontWeight: '600' },
-  navTextActive: { color: '#00A86B' },
+  bottomNav: { flexDirection: 'row', position: 'absolute', bottom: 0, left: 0, right: 0, backgroundColor: '#fff', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingVertical: 8, paddingBottom: 18, shadowColor: '#000', shadowOffset: { width: 0, height: -1 }, shadowOpacity: 0.04, shadowRadius: 6, elevation: 8 },
+  navItem: { flex: 1, alignItems: 'center', justifyContent: 'center', paddingVertical: 2 },
+  navText: { color: '#999', fontSize: 10, marginTop: 3, fontWeight: '500', letterSpacing: 0.2 },
+  navTextActive: { color: '#00A86B', fontWeight: '700' },
 
   modalOverlay: { position: 'absolute', top: 0, left: 0, right: 0, bottom: 0, backgroundColor: 'rgba(0,0,0,0.5)', justifyContent: 'flex-end' },
   modalContent: { backgroundColor: '#fff', borderTopLeftRadius: 32, borderTopRightRadius: 32, maxHeight: '92%', shadowColor: '#000', shadowOffset: { width: 0, height: -8 }, shadowOpacity: 0.12, shadowRadius: 24, elevation: 24 },
@@ -1983,5 +2411,5 @@ const styles = StyleSheet.create({
   inputLabel: { color: '#666', marginBottom: 8, fontSize: 13, fontWeight: '700', textTransform: 'uppercase', letterSpacing: 0.5 },
   textInput: { backgroundColor: '#F8F9FA', borderWidth: 1, borderColor: '#EAEAEA', borderRadius: 14, color: '#111', padding: 15, fontSize: 15 },
   submitButton: { backgroundColor: '#00A86B', flexDirection: 'row', alignItems: 'center', justifyContent: 'center', padding: 18, borderRadius: 16, marginTop: 8, gap: 10, shadowColor: '#00A86B', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.3, shadowRadius: 8, elevation: 4 },
-  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '800' },
+  submitButtonText: { color: '#fff', fontSize: 16, fontWeight: '700' },
 });

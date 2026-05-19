@@ -89,7 +89,7 @@ Last updated: May 10, 2026
 - **RLS**: `FOR UPDATE USING (auth.uid() = user_id) WITH CHECK (auth.uid() = user_id)`
 - **Auth**: Required
 - **Risk**: Low - User can only update their own
-- **Business Logic**: 5-minute edit window enforced on client
+- **Business Logic**: 5-minute edit window enforced **at DB level** via `trg_enforce_review_edit_window` trigger (see `database/security_hardening.sql`)
 - **Location**: `mobile/App.tsx:610` (submitReview)
 
 #### ✓ SAFE: Review Delete
@@ -116,11 +116,11 @@ Last updated: May 10, 2026
 
 ### Storage Access
 
-#### ⚠ SKIPPED: Review Photos
-- **Policy**: Public read, authenticated write
-- **Note**: Photo storage policy not modified per user request
-- **Risk**: Photos are publicly accessible but owner-matched filename
-- **Location**: `database/storage_policy.sql`
+#### ✓ SAFE: Review Photos
+- **Policy**: Public read, owner-scoped write/delete/update
+- **Note**: Hardened in `database/security_hardening.sql` — uploads scoped to `review-photos/{user_id}/` path
+- **Risk**: Low - Users can only write/delete their own folder
+- **Location**: `database/storage_policy.sql`, `database/security_hardening.sql`
 
 ---
 
@@ -143,7 +143,8 @@ Last updated: May 10, 2026
 | Authenticated Reads | 6 | 6 | 0 | 0 |
 | Authenticated Writes | 5 | 5 | 0 | 0 |
 | Admin Operations | 2 | 2 | 0 | 0 |
-| **TOTAL** | **17** | **17** | **0** | **0** |
+| Storage Operations | 3 | 3 | 0 | 0 |
+| **TOTAL** | **20** | **20** | **0** | **0** |
 
 ## Recommendations
 
@@ -153,10 +154,14 @@ Last updated: May 10, 2026
 4. ✓ Admin scripts use secure service role wrapper
 5. ✓ Rate limiting implemented for auth endpoints
 6. ✓ Error handling improved with logging
-7. Consider: Add DELETE review endpoint for users
-8. Consider: Implement UI for deleting own reviews
-9. Consider: Add audit logging for admin operations
-10. Consider: Quarterly RLS policy review process
+7. ✓ 5-minute edit window enforced at DB level via trigger
+8. ✓ Storage upload scoped to owner's UID folder
+9. ✓ `review_attribute_values` UPDATE/DELETE policies added
+10. ✓ `users` table INSERT blocked from direct client access
+11. Consider: Add DELETE review endpoint for users
+12. Consider: Implement UI for deleting own reviews
+13. Consider: Add audit logging for admin operations
+14. Consider: Quarterly RLS policy review process
 
 ## Testing Checklist
 
