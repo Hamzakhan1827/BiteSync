@@ -27,9 +27,10 @@
     "web": {
       "favicon": "./assets/favicon.png"
     },
+    "owner": "shehryar12131",
     "extra": {
       "eas": {
-        "projectId": "6dfc5aab-b58a-406c-abf7-60b786269658"
+        "projectId": "72a21f0c-550e-4813-a3a8-312b5e2fad1d"
       }
     }
   }
