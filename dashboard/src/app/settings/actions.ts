@@ -42,3 +42,34 @@ export async function saveFollowupPolicy(payload: {
   if (error) return { error: error.message }
   return { success: true }
 }
+
+export async function saveCampaignSettings(payload: {
+  restaurantId: string
+  recoveryEmailsEnabled: boolean
+  winbackEmailsEnabled: boolean
+}) {
+  const supabase = await createClient()
+  const { data: { user } } = await supabase.auth.getUser()
+  if (!user) return { error: 'Not authenticated' }
+
+  const { data: profile } = await supabaseAdmin
+    .from('users')
+    .select('managed_restaurant_id')
+    .eq('id', user.id)
+    .single()
+
+  if (profile?.managed_restaurant_id !== payload.restaurantId) {
+    return { error: 'Unauthorized' }
+  }
+
+  const { error } = await supabaseAdmin
+    .from('restaurants')
+    .update({
+      recovery_emails_enabled: payload.recoveryEmailsEnabled,
+      winback_emails_enabled: payload.winbackEmailsEnabled,
+    })
+    .eq('id', payload.restaurantId)
+
+  if (error) return { error: error.message }
+  return { success: true }
+}

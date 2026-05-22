@@ -1,10 +1,13 @@
 {
   "permissions": {
     "allow": [
-      "Bash(Get-ChildItem -Path \"D:\\\\bitesync\\\\mobile\" -Directory)",
-      "Bash(Select-Object -First 20)",
-      "Bash(npx tsc *)",
-      "WebSearch"
+      "WebSearch",
+      "Bash(grep -E '\\\\.\\(json|md|ts\\)$')",
+      "Bash(xargs grep -l \"email\\\\|webhook\\\\|nodemailer\\\\|sendgrid\\\\|twilio\\\\|notification\")",
+      "Bash(xargs grep -l \"claude\\\\|openai\\\\|anthropic\\\\|gpt\\\\|llm\\\\|ai\")",
+      "Bash(Get-ChildItem -Path \"e:\\\\D_backup\\\\bitesync\" -Directory)",
+      "Bash(Select-Object Name)",
+      "Bash(git pull *)"
     ]
   }
 }

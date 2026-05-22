@@ -2,6 +2,7 @@ import { Header } from '@/components/Header'
 import { createClient } from '@/utils/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { CustomerDirectory } from '@/components/CustomerDirectory'
+import { InsightsPanel } from '@/components/InsightsPanel'
 import { redirect } from 'next/navigation'
 
 export const revalidate = 0
@@ -26,7 +27,16 @@ export default async function CustomersPage() {
     )
   }
 
-  // Fetch all reviews for this restaurant, with user + item info (no private_note)
+  let restaurantName = 'All Restaurants'
+  if (profile?.managed_restaurant_id) {
+    const { data: restaurant } = await supabaseAdmin
+      .from('restaurants')
+      .select('name')
+      .eq('id', profile.managed_restaurant_id)
+      .single()
+    if (restaurant) restaurantName = restaurant.name
+  }
+
   let query = supabaseAdmin
     .from('reviews')
     .select(`
@@ -49,8 +59,35 @@ export default async function CustomersPage() {
   }
 
   const { data: reviews } = await query
+  const all = (reviews ?? []) as any[]
 
-  // Group by user and compute per-user stats
+  // --- Insights data ---
+  const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+  const weekly = all.filter((r) => r.created_at >= oneWeekAgo)
+  const weeklyStats = {
+    total: weekly.length,
+    positive: weekly.filter((r) => r.rating_thumbs === true).length,
+    negative: weekly.filter((r) => r.rating_thumbs === false).length,
+  }
+
+  const menuMap = new Map<string, { id: string; name: string; total: number; positive: number; negative: number; negativeNotes: string[] }>()
+  for (const r of all) {
+    const item = r.menu_items
+    if (!item) continue
+    if (!menuMap.has(item.id)) {
+      menuMap.set(item.id, { id: item.id, name: item.name, total: 0, positive: 0, negative: 0, negativeNotes: [] })
+    }
+    const m = menuMap.get(item.id)!
+    m.total++
+    if (r.rating_thumbs === true) m.positive++
+    if (r.rating_thumbs === false) {
+      m.negative++
+      if (r.public_note) m.negativeNotes.push(r.public_note)
+    }
+  }
+  const menuPerformance = Array.from(menuMap.values()).sort((a, b) => b.total - a.total)
+
+  // --- Customer directory data ---
   const customerMap: Record<string, {
     id: string
     full_name: string | null
@@ -66,9 +103,9 @@ export default async function CustomersPage() {
     }[]
   }> = {}
 
-  for (const r of reviews ?? []) {
-    const u = r.users as any
-    const item = r.menu_items as any
+  for (const r of all) {
+    const u = r.users
+    const item = r.menu_items
     if (!u?.id) continue
     if (!customerMap[u.id]) {
       customerMap[u.id] = {
@@ -93,22 +130,33 @@ export default async function CustomersPage() {
 
   return (
     <>
-      <Header title="Customer Directory" />
+      <Header title="Customers & Insights" />
       <main className="flex-1 overflow-auto p-8 bg-slate-50 dark:bg-slate-950 transition-colors">
-        <div className="max-w-5xl mx-auto">
-          <div className="flex items-center justify-between mb-8">
-            <div>
-              <h2 className="text-2xl font-black text-slate-900 dark:text-slate-100">Diner Directory</h2>
-              <p className="text-sm text-slate-500 dark:text-slate-400 mt-1">
-                {customers.length} unique diner{customers.length !== 1 ? 's' : ''} have reviewed your restaurant.
-              </p>
+        <div className="max-w-5xl mx-auto space-y-8">
+
+          <InsightsPanel
+            restaurantName={restaurantName}
+            weeklyStats={weeklyStats}
+            menuPerformance={menuPerformance}
+            totalCustomers={customers.length}
+          />
+
+          <div>
+            <div className="flex items-center justify-between mb-4">
+              <div>
+                <h2 className="text-lg font-bold text-slate-900 dark:text-slate-100">Diner Directory</h2>
+                <p className="text-sm text-slate-500 dark:text-slate-400 mt-0.5">
+                  {customers.length} unique diner{customers.length !== 1 ? 's' : ''} have reviewed your restaurant
+                </p>
+              </div>
+              <div className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full flex items-center gap-2">
+                <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
+                Live
+              </div>
             </div>
-            <div className="px-3 py-1 bg-emerald-100 dark:bg-emerald-900/30 text-emerald-700 dark:text-emerald-400 text-sm font-semibold rounded-full flex items-center gap-2">
-              <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-              Live
-            </div>
+            <CustomerDirectory customers={customers} />
           </div>
-          <CustomerDirectory customers={customers} />
+
         </div>
       </main>
     </>

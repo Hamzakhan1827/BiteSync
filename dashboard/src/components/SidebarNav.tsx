@@ -2,17 +2,24 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { TrendingDown, Star, Users, Settings } from "lucide-react";
+import { TrendingDown, Star, Users, Settings, LayoutDashboard, UtensilsCrossed } from "lucide-react";
 
-const navItems = [
+const restaurantNavItems = [
   { name: "Overview", href: "/", icon: TrendingDown },
   { name: "Feedback Hub", href: "/feedback", icon: Star },
   { name: "Customers", href: "/customers", icon: Users },
   { name: "Settings", href: "/settings", icon: Settings },
 ];
 
-export function SidebarNav() {
+const adminNavItems = [
+  { name: "Platform Overview", href: "/admin", icon: LayoutDashboard },
+  { name: "Menu Manager", href: "/menu", icon: UtensilsCrossed },
+];
+
+export function SidebarNav({ isSuperAdmin = false }: { isSuperAdmin?: boolean }) {
   const pathname = usePathname();
+  const navItems = isSuperAdmin ? adminNavItems : restaurantNavItems;
+
   return (
     <nav className="space-y-1 px-3">
       {navItems.map(({ name, href, icon: Icon }) => {

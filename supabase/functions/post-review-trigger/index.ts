@@ -11,6 +11,7 @@ interface Restaurant {
   followup_policy: FollowupPolicy
   followup_discount_percent: number
   followup_custom_template: string | null
+  recovery_emails_enabled: boolean
 }
 
 interface GeneratedEmail {
@@ -19,7 +20,6 @@ interface GeneratedEmail {
 }
 
 Deno.serve(async (req) => {
-  // Validate webhook secret to prevent unauthorized calls
   const webhookSecret = req.headers.get('x-webhook-secret')
   if (webhookSecret !== Deno.env.get('WEBHOOK_SECRET')) {
     return new Response('Unauthorized', { status: 401 })
@@ -33,11 +33,6 @@ Deno.serve(async (req) => {
     }
 
     const review = payload.record
-
-    // Only follow up when the customer left a public note — they engaged
-    if (!review.public_note?.trim()) {
-      return json({ skipped: 'no_public_note' })
-    }
 
     const supabase = createClient(
       Deno.env.get('SUPABASE_URL')!,
@@ -63,48 +58,31 @@ Deno.serve(async (req) => {
 
     const { data: restaurant, error: restErr } = await supabase
       .from('restaurants')
-      .select('id, name, logo_url, followup_enabled, followup_policy, followup_discount_percent, followup_custom_template')
+      .select('id, name, logo_url, followup_enabled, followup_policy, followup_discount_percent, followup_custom_template, recovery_emails_enabled')
       .eq('id', category.restaurant_id)
       .single<Restaurant>()
 
     if (restErr || !restaurant) return json({ skipped: 'restaurant_not_found' })
 
-    if (!restaurant.followup_enabled) {
-      return json({ skipped: 'followup_disabled' })
+    const hasPublicNote = Boolean(review.public_note?.trim())
+    const shouldFollowup = restaurant.followup_enabled && hasPublicNote
+    const shouldRecover = restaurant.recovery_emails_enabled && review.rating_thumbs === false
+
+    if (!shouldFollowup && !shouldRecover) {
+      return json({ skipped: 'nothing_to_do' })
     }
 
-    // Guard: only one follow-up per review
+    // Skip if already sent an email for this review
     const { data: existingLog } = await supabase
       .from('ai_followup_log')
       .select('id')
       .eq('review_id', review.id)
+      .eq('status', 'sent')
       .maybeSingle()
 
     if (existingLog) return json({ skipped: 'already_sent' })
 
-    // Guard: 24-hour cooldown per customer per restaurant
-    const cooldownStart = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()
-    const { count: recentCount } = await supabase
-      .from('ai_followup_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('user_id', review.user_id)
-      .eq('restaurant_id', restaurant.id)
-      .eq('status', 'sent')
-      .gte('sent_at', cooldownStart)
-
-    if ((recentCount ?? 0) > 0) {
-      await logResult(supabase, {
-        review_id: review.id,
-        restaurant_id: restaurant.id,
-        user_id: review.user_id,
-        policy_used: restaurant.followup_policy,
-        status: 'skipped',
-        skip_reason: 'cooldown_24h',
-      })
-      return json({ skipped: 'cooldown_24h' })
-    }
-
-    // Get customer name from public.users, email from auth.users
+    // Get customer info (needed for both flows)
     const { data: userProfile } = await supabase
       .from('users')
       .select('full_name')
@@ -127,99 +105,193 @@ Deno.serve(async (req) => {
       return json({ skipped: 'no_email' })
     }
 
-    const ratingText = review.rating_thumbs === true
-      ? 'positive'
-      : review.rating_thumbs === false
-        ? 'negative'
-        : 'neutral'
+    // --- AI Follow-up email (all reviews with a public note) ---
+    if (shouldFollowup) {
+      // Guard: 1-minute cooldown per customer per restaurant (change to 24 * 60 * 60 * 1000 for production)
+      const cooldownStart = new Date(Date.now() - 1 * 60 * 1000).toISOString()
+      const { count: recentCount } = await supabase
+        .from('ai_followup_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', review.user_id)
+        .eq('restaurant_id', restaurant.id)
+        .eq('status', 'sent')
+        .gte('sent_at', cooldownStart)
 
-    // Generate email with OpenAI
-    const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY')! })
+      if ((recentCount ?? 0) > 0) {
+        await logResult(supabase, {
+          review_id: review.id,
+          restaurant_id: restaurant.id,
+          user_id: review.user_id,
+          policy_used: restaurant.followup_policy,
+          status: 'skipped',
+          skip_reason: 'cooldown_24h',
+        })
+        // Don't return — let recovery email run below if applicable
+      } else {
+        const ratingText = review.rating_thumbs === true
+          ? 'positive'
+          : review.rating_thumbs === false
+            ? 'negative'
+            : 'neutral'
 
-    const completion = await openai.chat.completions.create({
-      model: 'gpt-4o-mini',
-      response_format: { type: 'json_object' },
-      messages: [
-        {
-          role: 'system',
-          content: buildSystemPrompt(restaurant),
-        },
-        {
-          role: 'user',
-          content: buildUserPrompt({
-            customerName,
-            restaurantName: restaurant.name,
-            menuItemName: menuItem.name,
-            rating: ratingText,
-            publicNote: review.public_note,
+        const openai = new OpenAI({ apiKey: Deno.env.get('OPENAI_API_KEY')! })
+
+        const completion = await openai.chat.completions.create({
+          model: 'gpt-4o-mini',
+          response_format: { type: 'json_object' },
+          messages: [
+            { role: 'system', content: buildSystemPrompt(restaurant) },
+            {
+              role: 'user',
+              content: buildUserPrompt({
+                customerName,
+                restaurantName: restaurant.name,
+                menuItemName: menuItem.name,
+                rating: ratingText,
+                publicNote: review.public_note,
+              }),
+            },
+          ],
+          max_tokens: 400,
+          temperature: 0.7,
+        })
+
+        let email: GeneratedEmail
+        try {
+          email = JSON.parse(completion.choices[0].message.content!) as GeneratedEmail
+          if (!email.subject || !email.body) throw new Error('missing fields')
+        } catch {
+          await logResult(supabase, {
+            review_id: review.id,
+            restaurant_id: restaurant.id,
+            user_id: review.user_id,
+            policy_used: restaurant.followup_policy,
+            status: 'failed',
+            skip_reason: 'invalid_ai_response',
+          })
+          return json({ error: 'invalid_ai_response' }, 500)
+        }
+
+        const fromField = 'onboarding@resend.dev'
+        const resendRes = await fetch('https://api.resend.com/emails', {
+          method: 'POST',
+          headers: {
+            Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+            'Content-Type': 'application/json',
+          },
+          body: JSON.stringify({
+            from: fromField,
+            to: customerEmail,
+            subject: email.subject,
+            text: email.body,
+            html: buildEmailHtml(restaurant.name, email.body, restaurant.logo_url),
           }),
+        })
+
+        const generatedMessage = `Subject: ${email.subject}\n\n${email.body}`
+
+        if (!resendRes.ok) {
+          const resendErr = await resendRes.text()
+          await logResult(supabase, {
+            review_id: review.id,
+            restaurant_id: restaurant.id,
+            user_id: review.user_id,
+            policy_used: restaurant.followup_policy,
+            generated_message: generatedMessage,
+            email_sent_to: customerEmail,
+            status: 'failed',
+            skip_reason: resendErr.slice(0, 500),
+          })
+          return json({ error: 'email_send_failed' }, 500)
+        }
+
+        await logResult(supabase, {
+          review_id: review.id,
+          restaurant_id: restaurant.id,
+          user_id: review.user_id,
+          policy_used: restaurant.followup_policy,
+          generated_message: generatedMessage,
+          email_sent_to: customerEmail,
+          status: 'sent',
+        })
+
+        // Followup sent — recovery would duplicate, so return here
+        return json({ sent: true, to: customerEmail, type: 'followup' })
+      }
+    }
+
+    // --- Recovery email (negative reviews only, fires when followup was skipped/disabled) ---
+    if (shouldRecover) {
+      // 7-day cooldown: don't spam the same unhappy customer repeatedly
+      const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
+      const { count: recentRecovery } = await supabase
+        .from('ai_followup_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('user_id', review.user_id)
+        .eq('restaurant_id', restaurant.id)
+        .eq('policy_used', 'recovery')
+        .eq('status', 'sent')
+        .gte('sent_at', sevenDaysAgo)
+
+      if ((recentRecovery ?? 0) > 0) {
+        return json({ skipped: 'recovery_cooldown_7d' })
+      }
+
+      const firstName = customerName.split(' ')[0]
+      const recoveryBody = [
+        `Hi ${firstName},`,
+        '',
+        `Thank you for visiting ${restaurant.name} and taking the time to share your feedback. We're truly sorry your experience didn't meet your expectations.`,
+        '',
+        `Your feedback matters a great deal to us. We'd love the chance to make it right — please come back and give us another try.`,
+        '',
+        `See you soon,`,
+        restaurant.name,
+      ].join('\n')
+
+      const resendRes = await fetch('https://api.resend.com/emails', {
+        method: 'POST',
+        headers: {
+          Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
+          'Content-Type': 'application/json',
         },
-      ],
-      max_tokens: 400,
-      temperature: 0.7,
-    })
-
-    let email: GeneratedEmail
-    try {
-      email = JSON.parse(completion.choices[0].message.content!) as GeneratedEmail
-      if (!email.subject || !email.body) throw new Error('missing fields')
-    } catch {
-      await logResult(supabase, {
-        review_id: review.id,
-        restaurant_id: restaurant.id,
-        user_id: review.user_id,
-        policy_used: restaurant.followup_policy,
-        status: 'failed',
-        skip_reason: 'invalid_ai_response',
+        body: JSON.stringify({
+          from: 'onboarding@resend.dev',
+          to: customerEmail,
+          subject: `We're sorry about your experience, ${firstName}`,
+          html: buildEmailHtml(restaurant.name, recoveryBody, restaurant.logo_url),
+        }),
       })
-      return json({ error: 'invalid_ai_response' }, 500)
-    }
 
-    // Send via Resend
-    const fromDomain = Deno.env.get('RESEND_DOMAIN') || 'bitesync.app'
-    const resendRes = await fetch('https://api.resend.com/emails', {
-      method: 'POST',
-      headers: {
-        Authorization: `Bearer ${Deno.env.get('RESEND_API_KEY')}`,
-        'Content-Type': 'application/json',
-      },
-      body: JSON.stringify({
-        from: `${restaurant.name} <noreply@${fromDomain}>`,
-        to: customerEmail,
-        subject: email.subject,
-        text: email.body,
-        html: buildEmailHtml(restaurant.name, email.body, restaurant.logo_url),
-      }),
-    })
+      if (!resendRes.ok) {
+        const resendErr = await resendRes.text()
+        await logResult(supabase, {
+          review_id: review.id,
+          restaurant_id: restaurant.id,
+          user_id: review.user_id,
+          policy_used: 'recovery',
+          email_sent_to: customerEmail,
+          status: 'failed',
+          skip_reason: resendErr.slice(0, 500),
+        })
+        return json({ error: 'recovery_email_failed' }, 500)
+      }
 
-    const generatedMessage = `Subject: ${email.subject}\n\n${email.body}`
-
-    if (!resendRes.ok) {
-      const resendErr = await resendRes.text()
       await logResult(supabase, {
         review_id: review.id,
         restaurant_id: restaurant.id,
         user_id: review.user_id,
-        policy_used: restaurant.followup_policy,
-        generated_message: generatedMessage,
+        policy_used: 'recovery',
+        generated_message: recoveryBody,
         email_sent_to: customerEmail,
-        status: 'failed',
-        skip_reason: resendErr.slice(0, 500),
+        status: 'sent',
       })
-      return json({ error: 'email_send_failed' }, 500)
+
+      return json({ sent: true, to: customerEmail, type: 'recovery' })
     }
 
-    await logResult(supabase, {
-      review_id: review.id,
-      restaurant_id: restaurant.id,
-      user_id: review.user_id,
-      policy_used: restaurant.followup_policy,
-      generated_message: generatedMessage,
-      email_sent_to: customerEmail,
-      status: 'sent',
-    })
+    return json({ skipped: 'nothing_sent' })
 
-    return json({ sent: true, to: customerEmail })
   } catch (err: unknown) {
     const message = err instanceof Error ? err.message : 'unknown error'
     console.error('post-review-trigger:', message)
@@ -227,7 +299,6 @@ Deno.serve(async (req) => {
   }
 })
 
-// Each policy shapes the AI's persona and what it's allowed to offer
 function buildSystemPrompt(restaurant: Restaurant): string {
   const base = `You are a warm, concise customer relations assistant for "${restaurant.name}", a restaurant. Write a personalized follow-up email after a customer submits a review. Keep it genuine and human — 2 short paragraphs maximum. Never sound robotic or copy-paste.`
 

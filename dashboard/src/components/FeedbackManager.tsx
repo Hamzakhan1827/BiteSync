@@ -3,7 +3,8 @@
 import { useState, useMemo, useEffect } from "react";
 import { useSearchParams } from "next/navigation";
 import Image from "next/image";
-import { MessageSquare, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, X, ArrowLeft, Calendar, User, Utensils } from "lucide-react";
+import { MessageSquare, ThumbsUp, ThumbsDown, Search, ChevronDown, ChevronUp, ArrowLeft, Calendar, User, Utensils, Reply, Sparkles, Check } from "lucide-react";
+import { saveOwnerReply, generateAiReply } from "@/app/actions/feedback";
 
 type Review = {
   id: string;
@@ -11,6 +12,8 @@ type Review = {
   public_note: string | null;
   photo_url: string | null;
   created_at: string;
+  owner_reply: string | null;
+  owner_reply_at: string | null;
   menu_items: {
     id: string;
     name: string;
@@ -21,6 +24,7 @@ type Review = {
     phone_number: string | null;
     full_name: string | null;
   } | null;
+  restaurantName?: string;
 };
 
 function RatingBadge({ rating }: { rating: boolean | null }) {
@@ -45,6 +49,43 @@ function DetailPanel({ review, onClose }: { review: Review; onClose: () => void 
   const itemName = review.menu_items?.name || "Unknown Item";
   const dinerName = review.users?.full_name || "Deleted User";
   const date = new Date(review.created_at);
+
+  const [showReplyInput, setShowReplyInput] = useState(false);
+  const [replyText, setReplyText] = useState(review.owner_reply || "");
+  const [savedReply, setSavedReply] = useState(review.owner_reply || null);
+  const [isSaving, setIsSaving] = useState(false);
+  const [isGenerating, setIsGenerating] = useState(false);
+  const [justSaved, setJustSaved] = useState(false);
+
+  async function handleSave() {
+    setIsSaving(true);
+    try {
+      await saveOwnerReply(review.id, replyText);
+      setSavedReply(replyText.trim() || null);
+      setShowReplyInput(false);
+      setJustSaved(true);
+      setTimeout(() => setJustSaved(false), 2000);
+    } finally {
+      setIsSaving(false);
+    }
+  }
+
+  async function handleAiSuggest() {
+    if (!review.public_note) return;
+    setIsGenerating(true);
+    try {
+      const suggestion = await generateAiReply({
+        restaurantName: review.restaurantName || "the restaurant",
+        dinerName,
+        menuItemName: itemName,
+        rating: review.rating_thumbs,
+        publicNote: review.public_note,
+      });
+      setReplyText(suggestion);
+    } finally {
+      setIsGenerating(false);
+    }
+  }
 
   return (
     <>
@@ -142,6 +183,69 @@ function DetailPanel({ review, onClose }: { review: Review; onClose: () => void 
                 </div>
               )}
             </div>
+
+            {/* Owner Reply */}
+            {review.public_note && (
+              <div>
+                <p className="text-xs font-semibold uppercase tracking-wider text-slate-400 dark:text-slate-500 mb-3">
+                  Your Reply
+                </p>
+
+                {savedReply && !showReplyInput ? (
+                  <div className="bg-emerald-50 dark:bg-emerald-900/20 rounded-xl p-4 border-l-4 border-emerald-400">
+                    <p className="text-slate-700 dark:text-slate-300 text-sm leading-relaxed">{savedReply}</p>
+                    <button
+                      onClick={() => { setReplyText(savedReply); setShowReplyInput(true); }}
+                      className="mt-3 text-xs font-semibold text-emerald-600 dark:text-emerald-400 hover:underline"
+                    >
+                      Edit reply
+                    </button>
+                  </div>
+                ) : showReplyInput ? (
+                  <div className="space-y-3">
+                    <textarea
+                      value={replyText}
+                      onChange={(e) => setReplyText(e.target.value)}
+                      rows={4}
+                      placeholder="Write your reply..."
+                      className="w-full bg-white dark:bg-slate-800 border border-slate-200 dark:border-slate-700 rounded-xl p-4 text-sm text-slate-900 dark:text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-500/50 resize-none"
+                    />
+                    <div className="flex items-center gap-2">
+                      <button
+                        onClick={handleAiSuggest}
+                        disabled={isGenerating}
+                        className="flex items-center gap-1.5 px-3 py-2 bg-violet-100 dark:bg-violet-900/30 text-violet-700 dark:text-violet-400 text-xs font-semibold rounded-lg hover:bg-violet-200 dark:hover:bg-violet-900/50 transition-colors disabled:opacity-50"
+                      >
+                        <Sparkles className="w-3.5 h-3.5" />
+                        {isGenerating ? "Generating..." : "AI Suggest"}
+                      </button>
+                      <div className="flex-1" />
+                      <button
+                        onClick={() => { setShowReplyInput(false); setReplyText(savedReply || ""); }}
+                        className="px-3 py-2 text-xs font-semibold text-slate-500 hover:text-slate-700 dark:hover:text-slate-300 transition-colors"
+                      >
+                        Cancel
+                      </button>
+                      <button
+                        onClick={handleSave}
+                        disabled={isSaving || !replyText.trim()}
+                        className="flex items-center gap-1.5 px-4 py-2 bg-emerald-500 hover:bg-emerald-600 text-white text-xs font-semibold rounded-lg transition-colors disabled:opacity-50"
+                      >
+                        {isSaving ? "Saving..." : "Save Reply"}
+                      </button>
+                    </div>
+                  </div>
+                ) : (
+                  <button
+                    onClick={() => setShowReplyInput(true)}
+                    className="flex items-center gap-2 px-4 py-2.5 bg-slate-100 dark:bg-slate-800 hover:bg-slate-200 dark:hover:bg-slate-700 text-slate-700 dark:text-slate-300 text-sm font-semibold rounded-xl transition-colors"
+                  >
+                    {justSaved ? <Check className="w-4 h-4 text-emerald-500" /> : <Reply className="w-4 h-4" />}
+                    {justSaved ? "Saved!" : "Reply to this review"}
+                  </button>
+                )}
+              </div>
+            )}
 
           </div>
         </div>

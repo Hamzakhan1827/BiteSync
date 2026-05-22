@@ -992,7 +992,7 @@ export default function App() {
     try {
       const [countResult, dataResult] = await Promise.all([
         supabase.from('reviews').select('id', { count: 'exact', head: true }).eq('menu_item_id', itemId).neq('public_note', ''),
-        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, user_id, users(full_name, username, avatar_url)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
+        supabase.from('reviews').select('id, rating_thumbs, public_note, photo_url, created_at, user_id, owner_reply, users(full_name, username, avatar_url)').eq('menu_item_id', itemId).neq('public_note', '').order('created_at', { ascending: false }).range(offset, offset + 2),
       ]);
       setReviewTotal(countResult.count || 0);
       if (append) { setItemReviews(prev => [...prev, ...(dataResult.data || [])]); }
@@ -1550,6 +1550,12 @@ export default function App() {
                             <View style={{ flex: 1 }}>
                               <Text style={{ color: '#374151', fontSize: 14, lineHeight: 20 }} numberOfLines={3} ellipsizeMode="tail">{r.public_note}</Text>
                               <Text style={{ color: '#6B7280', fontSize: 11, marginTop: 6, fontWeight: '600' }}>{getRelativeTime(r.created_at)}</Text>
+                              {r.owner_reply ? (
+                                <View style={{ marginTop: 10, borderLeftWidth: 3, borderLeftColor: '#10b981', paddingLeft: 10, backgroundColor: '#f0fdf4', borderRadius: 6, padding: 8 }}>
+                                  <Text style={{ color: '#065f46', fontSize: 11, fontWeight: '700', marginBottom: 3 }}>Owner Response</Text>
+                                  <Text style={{ color: '#374151', fontSize: 13, lineHeight: 18 }}>{r.owner_reply}</Text>
+                                </View>
+                              ) : null}
                             </View>
                             
                             {r.photo_url ? (

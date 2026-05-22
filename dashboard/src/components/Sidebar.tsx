@@ -13,14 +13,16 @@ export async function Sidebar() {
   let displayName = "Loading...";
   let planName = "Accessing...";
   let initial = "B";
+  let isSuperAdmin = false;
 
   if (user) {
-    // Fetch the user's role and managed restaurant from public.users using admin client to bypass RLS if needed
     const { data: profile } = await supabaseAdmin
       .from('users')
       .select('is_super_admin, managed_restaurant_id, restaurants(name)')
       .eq('id', user.id)
       .single();
+
+    isSuperAdmin = profile?.is_super_admin ?? false;
 
     if (profile?.is_super_admin) {
       displayName = "BiteSync Network";
@@ -58,7 +60,7 @@ export async function Sidebar() {
           <p className="text-[10px] font-bold text-slate-500 dark:text-slate-500 uppercase tracking-widest mb-4 px-6 opacity-0 group-hover:opacity-100 transition-opacity duration-300 whitespace-nowrap">
             Main Menu
           </p>
-          <SidebarNav />
+          <SidebarNav isSuperAdmin={isSuperAdmin} />
         </div>
 
         {/* Bottom Actions */}

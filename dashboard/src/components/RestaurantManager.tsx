@@ -3,7 +3,7 @@
 import { useState, useMemo } from "react";
 import { Search, Plus, MapPin, Store, Edit2, Trash2, X, Image as ImageIcon } from "lucide-react";
 import Link from "next/link";
-import { supabase } from "@/lib/supabase";
+import { createRestaurant, updateRestaurant, deleteRestaurant, uploadRestaurantLogo } from "@/app/menu/actions";
 import { ConfirmModal } from "./ConfirmModal";
 
 type Restaurant = {
@@ -74,21 +74,11 @@ export function RestaurantManager({ initialRestaurants }: { initialRestaurants: 
 
     try {
       if (imageFile) {
-        const fileExt = imageFile.name.split('.').pop();
-        const fileName = `${Math.random()}.${fileExt}`;
-        const filePath = `logos/${fileName}`; // putting in same review-photos bucket for now
-
-        const { error: uploadError } = await supabase.storage
-          .from('review-photos')
-          .upload(filePath, imageFile);
-
-        if (uploadError) throw uploadError;
-
-        const { data: publicUrlData } = supabase.storage
-          .from('review-photos')
-          .getPublicUrl(filePath);
-        
-        logoUrl = publicUrlData.publicUrl;
+        const formData = new FormData();
+        formData.append('file', imageFile);
+        const uploadResult = await uploadRestaurantLogo(formData);
+        if (uploadResult.error) throw new Error(uploadResult.error);
+        logoUrl = uploadResult.url;
       }
 
       const rData = {
@@ -99,32 +89,13 @@ export function RestaurantManager({ initialRestaurants }: { initialRestaurants: 
       };
 
       if (newRestaurant.id) {
-        // Update
-        const { data, error } = await supabase
-          .from('restaurants')
-          .update(rData)
-          .eq('id', newRestaurant.id)
-          .select()
-          .single();
-        
-        if (error) throw error;
-        setRestaurants(restaurants.map(r => r.id === data.id ? data : r));
+        const result = await updateRestaurant({ id: newRestaurant.id, ...rData });
+        if (result.error) throw new Error(result.error);
+        setRestaurants(restaurants.map(r => r.id === result.data!.id ? result.data! : r));
       } else {
-        // Insert
-        const { data, error } = await supabase
-          .from('restaurants')
-          .insert([rData])
-          .select()
-          .single();
-        
-        if (error) throw error;
-
-        // Auto-seed default categories
-        const defaults = ['Appetizers', 'BBQ', 'Beverages', 'Burgers', 'Chinese', 'Desserts', 'Fast Food', 'Karahi', 'Pasta', 'Pizza', 'Salads', 'Sandwiches', 'Seafood', 'Steaks', 'Wraps'];
-        const categoriesToInsert = defaults.map(name => ({ restaurant_id: data.id, name }));
-        await supabase.from('menu_categories').insert(categoriesToInsert);
-
-        setRestaurants([...restaurants, data]);
+        const result = await createRestaurant(rData);
+        if (result.error) throw new Error(result.error);
+        setRestaurants([...restaurants, result.data!]);
       }
 
       closeEditor();
@@ -136,12 +107,12 @@ export function RestaurantManager({ initialRestaurants }: { initialRestaurants: 
     }
   };
 
-  const deleteRestaurant = async () => {
+  const handleDeleteRestaurant = async () => {
     if (!restaurantToDelete) return;
     setIsDeleting(true);
     try {
-      const { error } = await supabase.from('restaurants').delete().eq('id', restaurantToDelete);
-      if (error) throw error;
+      const result = await deleteRestaurant(restaurantToDelete);
+      if (result.error) throw new Error(result.error);
       setRestaurants(restaurants.filter(r => r.id !== restaurantToDelete));
       setRestaurantToDelete(null);
     } catch (err) {
@@ -277,7 +248,7 @@ export function RestaurantManager({ initialRestaurants }: { initialRestaurants: 
         isOpen={!!restaurantToDelete}
         title="Delete Restaurant"
         message="Are you sure you want to permanently delete this restaurant? This will delete all associated menus and reviews. This action cannot be undone."
-        onConfirm={deleteRestaurant}
+        onConfirm={handleDeleteRestaurant}
         onCancel={() => setRestaurantToDelete(null)}
         isLoading={isDeleting}
       />

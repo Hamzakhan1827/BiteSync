@@ -35,7 +35,9 @@ export default async function DashboardPage() {
     .eq('id', user.id)
     .single()
 
-  if (!profile?.managed_restaurant_id && !profile?.is_super_admin) {
+  if (profile?.is_super_admin) redirect('/admin')
+
+  if (!profile?.managed_restaurant_id) {
     return (
       <div className="flex items-center justify-center h-screen bg-slate-50 dark:bg-slate-950">
         <p className="text-slate-500">Your account is not linked to a restaurant.</p>
@@ -62,9 +64,7 @@ export default async function DashboardPage() {
     `)
     .order('created_at', { ascending: false })
 
-  if (!profile.is_super_admin) {
-    reviewQuery = reviewQuery.eq('menu_items.menu_categories.restaurant_id', profile.managed_restaurant_id)
-  }
+  reviewQuery = reviewQuery.eq('menu_items.menu_categories.restaurant_id', profile.managed_restaurant_id)
 
   const { data: reviews } = await reviewQuery
 

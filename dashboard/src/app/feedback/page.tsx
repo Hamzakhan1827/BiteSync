@@ -35,10 +35,12 @@ export default async function FeedbackPage() {
       public_note,
       photo_url,
       created_at,
+      owner_reply,
+      owner_reply_at,
       menu_items!inner (
         id,
         name,
-        menu_categories!inner (restaurant_id)
+        menu_categories!inner (restaurant_id, restaurants(name))
       ),
       users (email, phone_number, full_name)
     `)
@@ -65,7 +67,10 @@ export default async function FeedbackPage() {
           </div>
 
           <Suspense>
-            <FeedbackManager reviews={reviews || []} />
+            <FeedbackManager reviews={(reviews || []).map((r: any) => ({
+              ...r,
+              restaurantName: r.menu_items?.menu_categories?.restaurants?.name,
+            }))} />
           </Suspense>
 
         </div>
