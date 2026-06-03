@@ -1,0 +1,322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync Database Reference</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>Database Reference</h1>
+<p>All tables live in a Supabase-hosted PostgreSQL instance. Row Level Security (RLS) is enabled on every user-facing table.</p>
+<hr>
+<h2>Entity Relationship Overview</h2>
+<pre><code>users
+  └── reviews (user_id → users.id)
+        └── review_attribute_values (review_id → reviews.id)
+              └── item_attributes (item_attribute_id → item_attributes.id)
+<p>restaurants   └── menu_categories (restaurant_id → restaurants.id)         └── menu_items (category_id → menu_categories.id)               ├── item_attributes (menu_item_id → menu_items.id)               └── reviews (menu_item_id → menu_items.id)</p>
+<p>users   └── liked_items (user_id → users.id, item_id → menu_items.id) </code></pre></p>
+<hr>
+<h2>Tables</h2>
+<h3><code>users</code></h3>
+Stores diner profiles. Populated automatically via a trigger on <code>auth.users</code> (Supabase Auth).
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td>Matches <code>auth.uid()</code></td></tr>
+<tr><td><code>phone_number</code></td><td><code>varchar(20)</code></td><td>Unique, nullable (email auth used in v1)</td></tr>
+<tr><td><code>full_name</code></td><td><code>varchar(100)</code></td><td>Displayed in reviews</td></tr>
+<tr><td><code>avatar_url</code></td><td><code>text</code></td><td>Stores integer index (0–8) mapping to emoji avatars</td></tr>
+<tr><td><code>created_at</code></td><td><code>timestamptz</code></td><td>Auto-set</td></tr></tbody></table>
+<hr>
+<h3><code>restaurants</code></h3>
+Managed by the admin dashboard. Public read for all authenticated users.
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>name</code></td><td><code>varchar(255)</code></td><td></td></tr>
+<tr><td><code>address</code></td><td><code>text</code></td><td></td></tr>
+<tr><td><code>logo_url</code></td><td><code>text</code></td><td>URL to restaurant logo / hero image</td></tr>
+<tr><td><code>cuisine_type</code></td><td><code>text</code></td><td>Comma-separated tags, e.g. <code>"Desi BBQ, Karahi"</code></td></tr>
+<tr><td><code>price_range</code></td><td><code>text</code></td><td><code>"$"</code> / <code>"$$"</code> / <code>"$$$"</code> / <code>"$$$$"</code></td></tr>
+<tr><td><code>opening_hours</code></td><td><code>jsonb</code></td><td><code>{ "mon": "12:00-00:00", "fri": "12:00-02:00", ... }</code></td></tr>
+<tr><td><code>is_active</code></td><td><code>boolean</code></td><td>Hidden from app if false</td></tr>
+<tr><td><code>created_at</code></td><td><code>timestamptz</code></td><td></td></tr></tbody></table>
+<hr>
+<h3><code>menu_categories</code></h3>
+Groups menu items within a restaurant (e.g. "Karahi & Handi", "BBQ Specials").
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>restaurant_id</code></td><td><code>uuid</code> FK → <code>restaurants.id</code></td><td>Cascade delete</td></tr>
+<tr><td><code>name</code></td><td><code>varchar(100)</code></td><td>Shown as section header in app</td></tr>
+<tr><td><code>sort_order</code></td><td><code>integer</code></td><td>Controls display order</td></tr>
+<tr><td><code>created_at</code></td><td><code>timestamptz</code></td><td></td></tr></tbody></table>
+<hr>
+<h3><code>menu_items</code></h3>
+Individual dishes. Linked to a category (and therefore a restaurant).
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>category_id</code></td><td><code>uuid</code> FK → <code>menu_categories.id</code></td><td>Cascade delete</td></tr>
+<tr><td><code>name</code></td><td><code>varchar(255)</code></td><td></td></tr>
+<tr><td><code>description</code></td><td><code>text</code></td><td>Optional</td></tr>
+<tr><td><code>price</code></td><td><code>integer</code></td><td>Stored as whole number in PKR (e.g. <code>2200</code>)</td></tr>
+<tr><td><code>image_url</code></td><td><code>text</code></td><td>URL to dish photo</td></tr>
+<tr><td><code>is_available</code></td><td><code>boolean</code></td><td>If false, hidden from menu</td></tr>
+<tr><td><code>created_at</code></td><td><code>timestamptz</code></td><td></td></tr></tbody></table>
+<hr>
+<h3><code>reviews</code></h3>
+The dual-purpose core table. Serves as both the user's private food diary and the restaurant's public feedback feed.
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>user_id</code></td><td><code>uuid</code> FK → <code>users.id</code></td><td>Cascade delete</td></tr>
+<tr><td><code>menu_item_id</code></td><td><code>uuid</code> FK → <code>menu_items.id</code></td><td>Cascade delete</td></tr>
+<tr><td><code>rating_thumbs</code></td><td><code>boolean</code></td><td><code>true</code> = 👍, <code>false</code> = 👎, <code>null</code> = no rating</td></tr>
+<tr><td><code>private_note</code></td><td><code>text</code></td><td>Only the author can read this</td></tr>
+<tr><td><code>public_note</code></td><td><code>text</code></td><td>Visible to restaurant and other diners</td></tr>
+<tr><td><code>photo_url</code></td><td><code>text</code></td><td>URL to uploaded review photo (Supabase Storage)</td></tr>
+<tr><td><code>updated_at</code></td><td><code>timestamptz</code></td><td>Set by DB trigger; used for 5-min edit window</td></tr>
+<tr><td><code>created_at</code></td><td><code>timestamptz</code></td><td></td></tr></tbody></table>
+<blockquote><strong>Edit window:</strong> A database trigger enforces that <code>updated_at</code> cannot be set more than 5 minutes after <code>created_at</code>. Edits outside this window are rejected.</blockquote>
+<hr>
+<h3><code>liked_items</code></h3>
+Tracks a user's saved/favourite dishes.
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>user_id</code></td><td><code>uuid</code> FK → <code>users.id</code></td><td>Cascade delete</td></tr>
+<tr><td><code>item_id</code></td><td><code>uuid</code> FK → <code>menu_items.id</code></td><td>Cascade delete</td></tr>
+<tr><td><code>created_at</code></td><td><code>timestamptz</code></td><td></td></tr></tbody></table>
+<hr>
+<h3><code>item_attributes</code> <em>(future use)</em></h3>
+Defines custom rating dimensions per dish (e.g. "Spice Level", "Crispiness"). Not yet active in the v1 UI.
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>menu_item_id</code></td><td><code>uuid</code> FK</td><td></td></tr>
+<tr><td><code>attribute_name</code></td><td><code>varchar(100)</code></td><td>e.g. <code>"Spice Level"</code></td></tr>
+<tr><td><code>attribute_type</code></td><td><code>varchar(50)</code></td><td><code>"slider"</code> / <code>"boolean"</code> / <code>"text"</code></td></tr>
+<tr><td><code>min_label</code></td><td><code>varchar(50)</code></td><td>e.g. <code>"Too Mild"</code></td></tr>
+<tr><td><code>max_label</code></td><td><code>varchar(50)</code></td><td>e.g. <code>"Too Spicy"</code></td></tr></tbody></table>
+<hr>
+<h3><code>review_attribute_values</code> <em>(future use)</em></h3>
+Stores the diner's response to each attribute for a given review.
+<table><thead><tr><th>Column</th><th>Type</th><th>Notes</th></tr></thead><tbody><tr><td><code>id</code></td><td><code>uuid</code> PK</td><td></td></tr>
+<tr><td><code>review_id</code></td><td><code>uuid</code> FK → <code>reviews.id</code></td><td></td></tr>
+<tr><td><code>item_attribute_id</code></td><td><code>uuid</code> FK</td><td></td></tr>
+<tr><td><code>value_numeric</code></td><td><code>integer</code></td><td>For sliders (0–100)</td></tr>
+<tr><td><code>value_boolean</code></td><td><code>boolean</code></td><td>For toggle attributes</td></tr>
+<tr><td><code>value_text</code></td><td><code>text</code></td><td>For free-text attributes</td></tr></tbody></table>
+<hr>
+<h2>Row Level Security (RLS)</h2>
+<p>All user-facing tables have RLS enabled. The policies below are the enforced rules.</p>
+<h3><code>users</code></h3>
+<table><thead><tr><th>Policy</th><th>Operation</th><th>Rule</th></tr></thead><tbody><tr><td>Users can read their own row</td><td>SELECT</td><td><code>auth.uid() = id</code></td></tr>
+<tr><td>Users can update their own row</td><td>UPDATE</td><td><code>auth.uid() = id</code></td></tr>
+<tr><td>Service role can read all</td><td>SELECT</td><td><code>true</code> (service role only)</td></tr></tbody></table>
+<h3><code>restaurants</code></h3>
+<table><thead><tr><th>Policy</th><th>Operation</th><th>Rule</th></tr></thead><tbody><tr><td>All authenticated users can read</td><td>SELECT</td><td><code>auth.role() = 'authenticated'</code></td></tr>
+<tr><td>Only service role can insert/update</td><td>INSERT/UPDATE</td><td>Service role only</td></tr></tbody></table>
+<h3><code>reviews</code></h3>
+<table><thead><tr><th>Policy</th><th>Operation</th><th>Rule</th></tr></thead><tbody><tr><td>Users can read their own reviews</td><td>SELECT</td><td><code>auth.uid() = user_id</code></td></tr>
+<tr><td>Restaurant admins can read public notes</td><td>SELECT</td><td><code>public_note IS NOT NULL</code> (via admin role)</td></tr>
+<tr><td>Users can insert their own reviews</td><td>INSERT</td><td><code>auth.uid() = user_id</code></td></tr>
+<tr><td>Users can update within 5-min window</td><td>UPDATE</td><td><code>auth.uid() = user_id</code> (trigger enforces time limit)</td></tr>
+<tr><td>Users can delete their own reviews</td><td>DELETE</td><td><code>auth.uid() = user_id</code></td></tr></tbody></table>
+<h3><code>liked_items</code></h3>
+<table><thead><tr><th>Policy</th><th>Operation</th><th>Rule</th></tr></thead><tbody><tr><td>Users can read their own</td><td>SELECT</td><td><code>auth.uid() = user_id</code></td></tr>
+<tr><td>Users can insert their own</td><td>INSERT</td><td><code>auth.uid() = user_id</code></td></tr>
+<tr><td>Users can delete their own</td><td>DELETE</td><td><code>auth.uid() = user_id</code></td></tr></tbody></table>
+<hr>
+<h2>Indexes</h2>
+<p>All indexes are defined in <code>database/indexes.sql</code>.</p>
+<pre><code>CREATE INDEX idx_menu_categories_restaurant ON menu_categories(restaurant_id);
+CREATE INDEX idx_menu_items_category         ON menu_items(category_id);
+CREATE INDEX idx_item_attributes_item        ON item_attributes(menu_item_id);
+CREATE INDEX idx_reviews_user                ON reviews(user_id);
+CREATE INDEX idx_reviews_item                ON reviews(menu_item_id);
+CREATE INDEX idx_review_values_review        ON review_attribute_values(review_id);
+</code></pre>
+<hr>
+<h2>Storage Buckets</h2>
+<table><thead><tr><th>Bucket</th><th>Purpose</th><th>Access</th></tr></thead><tbody><tr><td><code>review-pics</code></td><td>User-uploaded review photos</td><td>Authenticated users can upload; public read</td></tr></tbody></table>
+<hr>
+<h2>SQL Files Reference</h2>
+<table><thead><tr><th>File</th><th>Purpose</th></tr></thead><tbody><tr><td><code>schema.sql</code></td><td>Full table definitions</td></tr>
+<tr><td><code>rls_policies.sql</code></td><td>All RLS policies</td></tr>
+<tr><td><code>reviews_rls_complete.sql</code></td><td>Reviews-specific RLS (SELECT, INSERT, UPDATE, DELETE)</td></tr>
+<tr><td><code>auth_trigger.sql</code></td><td>Auto-creates <code>users</code> row on Supabase Auth signup</td></tr>
+<tr><td><code>indexes.sql</code></td><td>Performance indexes</td></tr>
+<tr><td><code>seed.sql</code></td><td>5 seed restaurants + menus</td></tr>
+<tr><td><code>seed_fake_reviews.sql</code></td><td>Mock reviews for testing</td></tr>
+<tr><td><code>security_hardening.sql</code></td><td>Additional security constraints</td></tr>
+<tr><td><code>review_rate_limit.sql</code></td><td>5-minute edit window trigger</td></tr>
+<tr><td><code>liked_items.sql</code></td><td>liked_items table + policies</td></tr>
+<tr><td><code>storage_policy.sql</code></td><td>Storage bucket policies</td></tr>
+<tr><td><code>setup_roles.sql</code></td><td><code>restaurant_admin</code>, <code>super_admin</code> roles</td></tr></tbody></table>
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync Database Reference</span>
+  </div>
+</body>
+</html>

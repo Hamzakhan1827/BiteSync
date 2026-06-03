@@ -1,0 +1,298 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync Architecture</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>Architecture</h1>
+<p>This document covers how BiteSync is structured, how data flows through the system, and the decisions behind the design.</p>
+<hr>
+<h2>System Overview</h2>
+<pre><code>┌──────────────────────────────────────────────────────────┐
+│                        CLIENTS                           │
+│                                                          │
+│   ┌─────────────────┐        ┌──────────────────────┐   │
+│   │  Mobile App      │        │  Restaurant Dashboard │   │
+│   │  React Native    │        │  Next.js (App Router) │   │
+│   │  Expo 54         │        │  localhost:3000        │   │
+│   │  Android / Web   │        │  (Web only)           │   │
+│   └────────┬────────┘        └──────────┬───────────┘   │
+│            │                            │                │
+└────────────┼────────────────────────────┼────────────────┘
+             │  HTTPS + Supabase JS SDK   │
+             ▼                            ▼
+┌──────────────────────────────────────────────────────────┐
+│                       SUPABASE                           │
+│                                                          │
+│   ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
+│   │  Auth        │  │  PostgreSQL  │  │  Storage     │  │
+│   │  Email/Pass  │  │  (Primary DB)│  │  (Images)    │  │
+│   │  JWT tokens  │  │  + RLS       │  │  review-pics │  │
+│   └──────────────┘  └──────────────┘  └──────────────┘  │
+└──────────────────────────────────────────────────────────┘
+</code></pre>
+<hr>
+<h2>Component Breakdown</h2>
+<h3>1. Mobile App (<code>/mobile</code>)</h3>
+<p>The mobile app is the primary user-facing product. It is a single-file React Native application (<code>App.tsx</code>) which manages all screens, state, and navigation through a custom tab-and-stack pattern without a routing library.</p>
+<strong>Navigation model:</strong>
+<pre><code>App
+├── Auth Screen           (if no session)
+└── Main App              (if authenticated)
+    ├── Sidebar Drawer    (hamburger menu)
+    ├── Bottom Tab Bar    (Home | Review | Profile)
+    │
+    ├── [Home Tab]
+    │   ├── Landing       (dropdown search + favourites + trending)
+    │   └── Restaurant → Menu → Item Detail
+    │
+    ├── [Review Tab]
+    │   └── Restaurant List → Menu → Item Detail → Rate Meal modal
+    │
+    └── [Profile Tab]
+        └── Food Diary + Edit Review modal
+</code></pre>
+<strong>State management:</strong> All state is managed with React <code>useState</code> / <code>useEffect</code> hooks directly in <code>App.tsx</code>. No Redux or Zustand — kept intentionally simple for the single-developer phase.
+<strong>Key state groups:</strong>
+<table><thead><tr><th>Group</th><th>Variables</th></tr></thead><tbody><tr><td>Auth</td><td><code>session</code>, <code>email</code>, <code>password</code></td></tr>
+<tr><td>Navigation</td><td><code>currentTab</code>, <code>homeView</code>, <code>selectedRestaurant</code>, <code>detailItem</code></td></tr>
+<tr><td>Restaurants</td><td><code>restaurants</code>, <code>filteredRestaurants</code>, <code>restaurantRatings</code></td></tr>
+<tr><td>Menu</td><td><code>menuItems</code>, <code>menuLoading</code>, <code>menuSearchQuery</code></td></tr>
+<tr><td>Reviews</td><td><code>itemReviews</code>, <code>reviewStats</code>, <code>diaryEntries</code></td></tr>
+<tr><td>Profile</td><td><code>profileUsername</code>, <code>profileAvatar</code>, <code>likedItems</code>, <code>reviewStreak</code></td></tr>
+<tr><td>Home Search</td><td><code>homeSearchText</code>, <code>homeDropdownRestaurants</code>, <code>homeDropdownDishes</code>, <code>searchHistory</code></td></tr></tbody></table>
+<hr>
+<h3>2. Restaurant Dashboard (<code>/dashboard</code>)</h3>
+<p>A Next.js 14 App Router application used by restaurant operators and the BiteSync admin team.</p>
+<strong>Key pages:</strong>
+<ul><li><code>/</code> — Login</li>
+<li><code>/dashboard</code> — Overview (restaurants listed)</li>
+<li><code>/dashboard/[restaurantId]</code> — Menu manager (categories + items)</li>
+<li><code>/dashboard/[restaurantId]/reviews</code> — Live public reviews</li>
+</ul>
+<strong>Access control:</strong> Protected via Supabase Auth. Only accounts with the <code>restaurant_admin</code> or <code>super_admin</code> role (stored in the <code>users</code> table) can access the dashboard.
+<hr>
+<h3>3. Database (<code>/database</code>)</h3>
+<p>Hosted on Supabase (managed PostgreSQL). All schema, RLS policies, and seed data are version-controlled as <code>.sql</code> files.</p>
+<p>See <a href="DATABASE.md"><code>DATABASE.md</code></a> for the full schema and policy reference.</p>
+<hr>
+<h2>Data Flow Examples</h2>
+<h3>User submits a review</h3>
+<pre><code>User taps "Submit"
+      │
+      ▼
+App.tsx: submitReview()
+      │
+      ├── INSERT into reviews (rating_thumbs, private_note, public_note, photo_url)
+      │         └── Supabase RLS: user_id must match auth.uid()
+      │
+      ├── If photo selected:
+      │     └── Upload to Supabase Storage bucket "review-pics"
+      │           URL stored back in reviews.photo_url
+      │
+      └── Refresh diary + item review list
+</code></pre>
+<h3>Home search dropdown</h3>
+<pre><code>User types in search bar (≥2 chars)
+      │
+      ▼
+useEffect [homeSearchText] — debounced 300ms
+      │
+      ├── supabase.from('restaurants').ilike('name', query).limit(5)
+      └── supabase.from('menu_items').ilike('name', query).limit(5)
+            │
+            ▼
+      Dropdown renders: RESTAURANTS section + DISHES section
+            │
+            ▼
+      User taps result → saveSearchToHistory() → AsyncStorage
+</code></pre>
+<hr>
+<h2>Key Design Decisions</h2>
+<table><thead><tr><th>Decision</th><th>Rationale</th></tr></thead><tbody><tr><td>Single <code>App.tsx</code> file</td><td>Fast iteration during early development; avoids over-engineering for a solo/small team. Refactor to screens when team scales.</td></tr>
+<tr><td>Supabase over custom API</td><td>Instant Auth, Storage, and RLS without writing a backend. Saves 4–6 weeks of API development.</td></tr>
+<tr><td>No state management library</td><td>At current scale (one file, linear navigation) React hooks are sufficient. Redux would add overhead without benefit.</td></tr>
+<tr><td>PKR stored as integer</td><td>Avoids floating point issues. <code>2200</code> = PKR 2,200. Displayed as <code>PKR {value}</code>.</td></tr>
+<tr><td>Reviews dual-purpose</td><td>One <code>reviews</code> row serves as both the user's private diary entry and the restaurant's public feedback. <code>private_note</code> is user-only; <code>public_note</code> is shared.</td></tr>
+<tr><td>RLS over application-layer checks</td><td>Security is enforced at the database level, not just the frontend. Even a malicious client cannot read or modify another user's private notes.</td></tr></tbody></table>
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync Architecture</span>
+  </div>
+</body>
+</html>

@@ -1,0 +1,307 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync Development Guide</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>Development Guide</h1>
+<p>Everything you need to run BiteSync locally from scratch.</p>
+<hr>
+<h2>Prerequisites</h2>
+<table><thead><tr><th>Tool</th><th>Minimum Version</th><th>Install</th></tr></thead><tbody><tr><td>Node.js</td><td>18.x</td><td>https://nodejs.org</td></tr>
+<tr><td>npm</td><td>9.x</td><td>Comes with Node.js</td></tr>
+<tr><td>Expo CLI</td><td>Latest</td><td><code>npm install -g expo-cli</code></td></tr>
+<tr><td>Git</td><td>Any</td><td>https://git-scm.com</td></tr>
+<tr><td>Android Studio</td><td>Latest (for native builds)</td><td>Optional for web dev</td></tr></tbody></table>
+<hr>
+<h2>Environment Variables</h2>
+<h3>Mobile App — <code>mobile/.env</code></h3>
+<pre><code>EXPO_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+EXPO_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+</code></pre>
+<blockquote>Variables prefixed with <code>EXPO_PUBLIC_</code> are bundled into the client. <strong>Never put the service role key here.</strong></blockquote>
+<h3>Dashboard — <code>dashboard/.env.local</code></h3>
+<pre><code>NEXT_PUBLIC_SUPABASE_URL=https://your-project.supabase.co
+NEXT_PUBLIC_SUPABASE_ANON_KEY=your-anon-key-here
+SUPABASE_SERVICE_ROLE_KEY=your-service-role-key-here
+</code></pre>
+<blockquote>The <code>SUPABASE_SERVICE_ROLE_KEY</code> is only used server-side (API routes). It bypasses RLS — guard it carefully.</blockquote>
+<hr>
+<h2>Running the Mobile App</h2>
+<pre><code>cd mobile
+npm install
+<h1>Development — opens Expo DevTools</h1>
+npx expo start
+<h1>Web only (fastest for UI development)</h1>
+npx expo start --web
+<h1>Android via Expo Go (scan QR with the Expo Go app)</h1>
+npx expo start --tunnel
+</code></pre>
+<h3>Platform targets</h3>
+<table><thead><tr><th>Command</th><th>Target</th></tr></thead><tbody><tr><td><code>npx expo start --web</code></td><td>Browser at <code>http://localhost:8081</code></td></tr>
+<tr><td><code>npx expo run:android</code></td><td>Connected Android device / emulator</td></tr>
+<tr><td><code>npx expo run:ios</code></td><td>macOS + Xcode required</td></tr></tbody></table>
+<hr>
+<h2>Running the Dashboard</h2>
+<pre><code>cd dashboard
+npm install
+npm run dev
+<h1>→ http://localhost:3000</h1>
+</code></pre>
+<hr>
+<h2>Database Setup (new Supabase project)</h2>
+<p>Run these SQL files in the Supabase SQL Editor in order:</p>
+<pre><code>1. database/schema.sql              ← Create all tables
+<li>database/auth_trigger.sql        ← Auto-create user profile on signup</li>
+<li>database/liked_items.sql         ← liked_items table</li>
+<li>database/rls_policies.sql        ← Enable RLS on all tables</li>
+<li>database/reviews_rls_complete.sql← Reviews-specific RLS policies</li>
+<li>database/storage_policy.sql      ← Storage bucket policies</li>
+<li>database/setup_roles.sql         ← Admin roles</li>
+<li>database/indexes.sql             ← Performance indexes</li>
+<li>database/seed.sql                ← 5 seed restaurants + menus</li>
+<li>database/seed_fake_reviews.sql  ← Optional: mock reviews for testing</li>
+</code></pre>
+<hr>
+<h2>Project Structure</h2>
+<h3>Mobile App</h3>
+<pre><code>mobile/
+├── App.tsx              ← All screens, navigation, and business logic
+├── BiteSyncLogo.tsx     ← Reusable logo SVG component
+├── lib/
+│   └── supabase.ts      ← Supabase client initialisation
+├── assets/              ← Icons, splash, logo
+├── android/             ← Native Android project (Gradle)
+├── app.json             ← Expo configuration
+├── eas.json             ← EAS Build configuration
+└── package.json
+</code></pre>
+<h3>Dashboard</h3>
+<pre><code>dashboard/
+├── src/
+│   ├── app/             ← Next.js App Router pages
+│   ├── components/      ← UI components
+│   └── utils/
+│       └── supabase/    ← Supabase client + middleware
+├── public/              ← Static assets
+└── package.json
+</code></pre>
+<hr>
+<h2>Code Conventions</h2>
+<h3>Mobile App (<code>App.tsx</code>)</h3>
+<ul><li>All styles defined in a single <code>StyleSheet.create({})</code> at the bottom of the file</li>
+<li>No inline magic numbers — reuse style tokens where possible</li>
+<li>State is grouped by concern (auth, navigation, restaurants, reviews, etc.)</li>
+<li>Data fetching functions are named <code>fetch*</code> (e.g. <code>fetchRestaurants</code>, <code>fetchDiary</code>)</li>
+<li>Navigation functions: <code>handleRestaurantSelect</code>, <code>openDetailPage</code>, <code>navigateFromSidebar</code></li>
+<li>Supabase calls always destructure <code>{ data, error }</code> and handle both paths</li>
+</ul>
+<h3>Naming</h3>
+<table><thead><tr><th>Type</th><th>Convention</th><th>Example</th></tr></thead><tbody><tr><td>Components</td><td>PascalCase</td><td><code>BiteSyncLogo</code></td></tr>
+<tr><td>State variables</td><td>camelCase</td><td><code>selectedRestaurant</code></td></tr>
+<tr><td>Handlers</td><td><code>handle*</code> or verb phrase</td><td><code>handleRestaurantSelect</code>, <code>submitReview</code></td></tr>
+<tr><td>Styles</td><td>camelCase</td><td><code>styles.menuCard</code></td></tr>
+<tr><td>DB tables</td><td>snake_case</td><td><code>menu_items</code>, <code>review_attribute_values</code></td></tr></tbody></table>
+<hr>
+<h2>Common Tasks</h2>
+<h3>Add a new restaurant</h3>
+Use the Dashboard at <code>/dashboard</code> → "Add Restaurant". Fill in name, address, cuisine type, price range, and upload a logo image.
+<h3>Add menu categories and items</h3>
+Inside the restaurant page on the Dashboard → "Add Category" → "Add Item". Items need a name, price, and optionally an image and description.
+<h3>Apply a database migration</h3>
+Write your SQL in <code>database/migrations/</code> with a timestamp prefix:
+<pre><code>database/migrations/20250524_add_column_x.sql
+</code></pre>
+Then run it in the Supabase SQL Editor.
+<h3>Reset local search history</h3>
+Search history is stored in <code>AsyncStorage</code> under the key <code>bitesync_search_history</code>. Clear it with:
+<pre><code>await AsyncStorage.removeItem('bitesync_search_history');
+</code></pre>
+<hr>
+<h2>Troubleshooting</h2>
+<table><thead><tr><th>Problem</th><th>Solution</th></tr></thead><tbody><tr><td><code>EXPO_PUBLIC_</code> vars not loading</td><td>Restart the Expo dev server after editing <code>.env</code></td></tr>
+<tr><td>Supabase returns 401</td><td>Check the anon key and that the user is signed in</td></tr>
+<tr><td>Image not uploading</td><td>Verify the <code>review-pics</code> storage bucket exists and the policy allows authenticated inserts</td></tr>
+<tr><td>RLS blocking an update</td><td>Check <code>database/reviews_rls_complete.sql</code> — the UPDATE policy requires <code>auth.uid() = user_id</code></td></tr>
+<tr><td>Android build fails</td><td>Ensure Android Studio + NDK are installed; run <code>cd android && ./gradlew clean</code></td></tr></tbody></table>
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync Development Guide</span>
+  </div>
+</body>
+</html>

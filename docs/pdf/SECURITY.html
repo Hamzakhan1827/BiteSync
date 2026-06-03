@@ -1,0 +1,242 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync Security Model</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>Security Model</h1>
+<p>BiteSync handles personal food diaries and private user notes. This document explains how data is protected at every layer.</p>
+<hr>
+<h2>Authentication</h2>
+<p>BiteSync uses <strong>Supabase Auth</strong> with email + password.</p>
+<ul><li>On signup, a trigger (<code>database/auth_trigger.sql</code>) automatically creates a matching row in the public <code>users</code> table, linking <code>auth.uid()</code> to the user's profile.</li>
+<li>All client requests are made with the <strong>anon key</strong> — a safe, public key. It only grants access to what RLS policies explicitly allow.</li>
+<li>The <strong>service role key</strong> (bypasses RLS) is only used server-side in the dashboard's Next.js API routes and is never shipped to the mobile client.</li>
+</ul>
+<hr>
+<h2>Row Level Security (RLS)</h2>
+<p>Every user-facing table has RLS enabled. The principle is <strong>default deny</strong> — unless a policy explicitly grants access, a query returns nothing (not an error, just empty results, so the app cannot fingerprint what exists).</p>
+<h3>The golden rules</h3>
+<table><thead><tr><th>Rule</th><th>Enforced by</th></tr></thead><tbody><tr><td>A user can only read their own <code>private_note</code></td><td><code>reviews</code> SELECT policy: <code>auth.uid() = user_id</code></td></tr>
+<tr><td>A user can only update their own reviews</td><td><code>reviews</code> UPDATE policy: <code>auth.uid() = user_id</code></td></tr>
+<tr><td>A user can only update within 5 minutes of posting</td><td>DB trigger on <code>reviews.updated_at</code></td></tr>
+<tr><td>A user cannot read another user's diary entries</td><td><code>reviews</code> SELECT policy</td></tr>
+<tr><td>Restaurant admins can only read <code>public_note</code>, not <code>private_note</code></td><td>Policy scoped to <code>public_note IS NOT NULL</code> via admin role</td></tr>
+<tr><td>No user can insert a review on behalf of another user</td><td>INSERT policy: <code>auth.uid() = user_id</code></td></tr></tbody></table>
+<hr>
+<h2>The 5-Minute Edit Window</h2>
+<p>Reviews can be edited up to 5 minutes after they are created. After that, the database rejects the update at the trigger level — not the application level — so it cannot be bypassed by a modified client.</p>
+<p>The trigger is defined in <code>database/review_rate_limit.sql</code>.</p>
+<hr>
+<h2>Data Privacy</h2>
+<table><thead><tr><th>Data</th><th>Who can see it</th></tr></thead><tbody><tr><td><code>reviews.private_note</code></td><td>The author only</td></tr>
+<tr><td><code>reviews.public_note</code></td><td>The author + restaurant admin (read-only)</td></tr>
+<tr><td><code>reviews.rating_thumbs</code></td><td>Powers aggregate scores shown publicly (not attributed to individuals)</td></tr>
+<tr><td><code>reviews.photo_url</code></td><td>Public (stored in Supabase Storage with a public URL)</td></tr>
+<tr><td><code>users.full_name</code></td><td>Shown on public reviews — user consents to this at review time</td></tr>
+<tr><td><code>users.phone_number</code></td><td>Not currently used (email auth in v1); stored but not exposed</td></tr>
+<tr><td><code>liked_items</code></td><td>The author only</td></tr></tbody></table>
+<hr>
+<h2>Storage Security</h2>
+<p>Review photos are stored in the <code>review-pics</code> Supabase Storage bucket.</p>
+<ul><li><strong>Upload</strong>: Authenticated users only, path scoped to their <code>user_id</code></li>
+<li><strong>Read</strong>: Public (photos are linked in public reviews intentionally)</li>
+<li><strong>Delete</strong>: The owner of the file, or service role</li>
+</ul>
+Policy defined in <code>database/storage_policy.sql</code>.
+<hr>
+<h2>Admin Roles</h2>
+<table><thead><tr><th>Role</th><th>Access</th></tr></thead><tbody><tr><td><code>authenticated</code> (default)</td><td>Read restaurants/menus, manage own reviews and liked items</td></tr>
+<tr><td><code>restaurant_admin</code></td><td>Read public reviews for their restaurant, manage their menu via dashboard</td></tr>
+<tr><td><code>super_admin</code></td><td>Full access to all tables, including user management</td></tr></tbody></table>
+Roles are stored in <code>users.role</code> column and checked in RLS policies.
+<hr>
+<h2>What to watch before production</h2>
+<ul><li>[ ] Rotate the Supabase anon key if it has been committed to a public repo</li>
+<li>[ ] Ensure <code>SUPABASE_SERVICE_ROLE_KEY</code> is <strong>never</strong> in <code>mobile/.env</code></li>
+<li>[ ] Verify <code>private_note</code> is excluded from any dashboard queries</li>
+<li>[ ] Confirm the 5-minute edit trigger is applied in the production database</li>
+<li>[ ] Review Supabase Auth → Email Templates if using email magic links</li>
+<li>[ ] Audit <code>super_admin_rls.sql</code> before adding any new admin accounts</li>
+</ul>
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync Security Model</span>
+  </div>
+</body>
+</html>

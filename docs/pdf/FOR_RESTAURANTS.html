@@ -1,0 +1,255 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync for Restaurants</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>BiteSync for Restaurants</h1>
+<blockquote>Turn every meal into actionable feedback — automatically.</blockquote>
+<p>BiteSync gives your restaurant a live window into what your customers actually think about every dish on your menu. No surveys. No paper forms. Just honest, real-time feedback from diners who visited your restaurant.</p>
+<hr>
+<h2>What You Get</h2>
+<h3>1. A Live Feedback Feed</h3>
+Every time a diner reviews one of your dishes on BiteSync, you see it instantly in your dashboard. You know exactly which items are loved, which need work, and what people are saying — item by item, not just a blanket star rating.
+<h3>2. Menu Performance Insights</h3>
+See which dishes receive the most positive feedback and which ones consistently disappoint. Make menu decisions based on real customer data, not guesswork.
+<h3>3. Full Menu Control</h3>
+Add, edit, or remove dishes from your menu directly through the BiteSync dashboard. Organise items into categories (e.g. "Karahi & Handi", "BBQ Specials") exactly the way you want them to appear in the app.
+<hr>
+<h2>Getting Started</h2>
+<h3>Step 1 — Your restaurant is added to BiteSync</h3>
+The BiteSync team adds your restaurant to the platform, including your menu, photos, price range, cuisine type, and opening hours. You don't need to do this yourself for the initial setup.
+<h3>Step 2 — You receive your dashboard login</h3>
+You'll get an email with your dashboard credentials. Log in at your dashboard URL using those details.
+<h3>Step 3 — Review your menu</h3>
+Once logged in, check that your restaurant details, categories, and menu items are correct. You can edit anything at any time.
+<h3>Step 4 — Diners start reviewing</h3>
+When customers dine at your restaurant and review dishes on the BiteSync app, their public feedback appears in your dashboard immediately.
+<h3>Step 5 — Act on the data</h3>
+Use the insights to identify your strongest dishes, address recurring complaints, and understand your customers better than ever before.
+<hr>
+<h2>The Dashboard</h2>
+<h3>Menu Manager</h3>
+<ul><li>Add and edit menu categories and dishes</li>
+<li>Upload photos for each dish</li>
+<li>Set prices and mark items as unavailable without deleting them</li>
+</ul>
+<h3>Reviews Feed</h3>
+Every public review shows you:
+<ul><li>The dish that was reviewed</li>
+<li>A thumbs up 👍 or thumbs down 👎</li>
+<li>The customer's written feedback (their public note)</li>
+<li>How long ago the review was posted</li>
+</ul>
+<blockquote><strong>Note:</strong> Customer private notes are strictly personal and are never visible to you. Only feedback the customer chooses to share publicly will appear in your dashboard.</blockquote>
+<h3>Insights Panel</h3>
+<ul><li>Percentage of positive reviews per dish</li>
+<li>Which items are rated "Popular" (high volume + high positive rate)</li>
+<li>Trending items across your full menu</li>
+</ul>
+<hr>
+<h2>Understanding Reviews</h2>
+<h3>What customers see vs. what you see</h3>
+<table><thead><tr><th>What the diner does</th><th>What you see</th></tr></thead><tbody><tr><td>Rates a dish 👍 or 👎</td><td>Aggregate score (e.g. "76% loved this")</td></tr>
+<tr><td>Writes a private note</td><td><strong>Nothing</strong> — this is their personal diary, invisible to you</td></tr>
+<tr><td>Writes a public note</td><td>The full written feedback in your dashboard</td></tr>
+<tr><td>Uploads a photo</td><td>The photo alongside their review</td></tr></tbody></table>
+<h3>Popularity Score</h3>
+An item is marked <strong>Popular</strong> when it has received enough reviews and the majority are positive. This badge appears in the app to help customers discover your best dishes.
+<hr>
+<h2>What Customers Experience</h2>
+<p>Customers using the BiteSync app can: <ul><li>Browse your restaurant and full menu</li> <li>Tap any dish and leave a review after eating</li> <li>Add a photo of their meal</li> <li>Keep a private food diary of everything they've eaten</li> <li>See which dishes are trending and loved by other diners</li> </ul> The app is free for customers. There are no pop-ups, no paid placements — BiteSync is built on honest feedback.</p>
+<hr>
+<h2>Privacy and Data</h2>
+<ul><li>Customer names appear on public reviews only because the customer chose to post publicly</li>
+<li>Private notes written by customers are <strong>never</strong> shared with restaurants — they are encrypted and user-only</li>
+<li>You cannot see who gave a thumbs down without a written note</li>
+<li>BiteSync does not sell individual customer data to third parties</li>
+</ul>
+See our full <a href="PRIVACY_POLICY.md">Privacy Policy</a> for details.
+<hr>
+<h2>Support</h2>
+<p>For any questions about your dashboard, menu setup, or account access:</p>
+<p>📧 <strong>support@bitesync.app</strong></p>
+<p>Response time: within 24 hours on business days.</p>
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync for Restaurants</span>
+  </div>
+</body>
+</html>

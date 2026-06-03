@@ -1,0 +1,243 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync FAQ</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>Frequently Asked Questions</h1>
+<hr>
+<h2>For Diners (App Users)</h2>
+<h3>How do I get the BiteSync app?</h3>
+The app is available as an Android APK. Ask for the download link at <strong>support@bitesync.app</strong> or from the restaurant that referred you to BiteSync. An app store release is coming soon.
+<h3>Is BiteSync free to use?</h3>
+Yes — the app is completely free for diners. There are no paid features, subscriptions, or in-app purchases.
+<h3>Can the restaurant see my private note?</h3>
+No. Never. Your private note is your personal diary entry and is invisible to everyone except you. Only your public note (if you choose to write one) is visible to the restaurant and other diners.
+<h3>Can I edit a review after posting it?</h3>
+Yes — but only within 5 minutes of posting. After 5 minutes, the review is locked. This keeps feedback honest and prevents manipulation.
+<h3>Can I delete a review?</h3>
+Yes. Go to your Profile tab, find the review in your diary, and tap delete. It is removed immediately from both your diary and the public dish page.
+<h3>Why can't I find a specific dish in the Review tab?</h3>
+The Review tab only shows restaurants — not individual dishes. Once you open a restaurant, you can search for a specific dish within that restaurant's menu. If you want to search for a dish by name across all restaurants, use the Home tab search bar.
+<h3>My search bar still shows my old search — how do I clear it?</h3>
+The search bar clears automatically every time you leave the search screen. If you're seeing an old query, try navigating away and coming back. Recent search history (the last 3 searches) is a separate feature that appears as a dropdown suggestion — you can tap the × next to any suggestion to dismiss it.
+<h3>How is the popularity score calculated?</h3>
+The percentage you see (e.g. "76% loved this") is the proportion of all thumbs up ratings out of all ratings (thumbs up + thumbs down) for that dish. It only shows when a dish has received a minimum number of reviews — so new dishes show "Be the first to review" instead.
+<h3>What does the 🔥 Popular badge mean?</h3>
+A dish is marked Popular when it has received a significant number of reviews and the majority are positive. It's our way of flagging the crowd favourites on a menu.
+<h3>What is my review streak?</h3>
+Your streak counts how many consecutive days you have submitted at least one review. It resets if you go a full day without reviewing anything. You can see your streak in the Profile tab.
+<h3>Can I use BiteSync without creating an account?</h3>
+No — an account is required to leave reviews, save favourites, and access your personal diary. This ensures all reviews are from real people and protects data integrity.
+<hr>
+<h2>For Restaurant Operators</h2>
+<h3>How do I get my restaurant listed on BiteSync?</h3>
+Contact us at <strong>support@bitesync.app</strong> with your restaurant name, address, and menu details. We'll set everything up for you and send you your dashboard credentials.
+<h3>Is BiteSync free for restaurants?</h3>
+BiteSync is free during the current beta phase. Paid plans for restaurants will be introduced in a future version. Early adopters who join during beta will receive preferential terms.
+<h3>Can I edit my own menu?</h3>
+Yes. Once you have dashboard access, you can add and edit categories and menu items at any time. Changes appear in the app immediately.
+<h3>Can I see who gave a thumbs down without a written note?</h3>
+No. Anonymous ratings (thumbs up/down without a public note) are aggregated into the score but are not attributed to any individual user. BiteSync protects diner anonymity.
+<h3>Can I reply to a customer review?</h3>
+Owner replies are part of the upcoming roadmap. Currently, reviews are read-only for restaurant operators.
+<h3>Can I remove a review I don't like?</h3>
+No. Reviews can only be deleted by the user who wrote them. BiteSync does not remove reviews on behalf of restaurants — the integrity of the feedback system depends on this policy.
+<p>If you believe a review contains false information or violates our terms, contact <strong>support@bitesync.app</strong> with details and we will investigate.</p>
+<h3>How quickly do reviews appear on my dashboard?</h3>
+Reviews appear in real time — as soon as a diner submits their feedback, it is visible in your dashboard.
+<h3>What data can I export?</h3>
+Data export (CSV download) is on the roadmap for a future version. If you need a data report urgently, contact support and we can assist manually.
+<h3>What happens to my data if I stop using BiteSync?</h3>
+Your restaurant data remains in our system unless you request removal. To request full data deletion, email <strong>support@bitesync.app</strong>.
+<hr>
+<h2>General</h2>
+<h3>Where is BiteSync available?</h3>
+BiteSync is currently available in Karachi, Pakistan. Expansion to other cities is planned once the platform is fully validated.
+<h3>How do I contact support?</h3>
+📧 <strong>support@bitesync.app</strong> — we respond within 24 hours on business days.
+<h3>Is my data safe?</h3>
+Yes. All data is stored on secure, encrypted cloud infrastructure. Your personal data is protected by Row Level Security — meaning your account can only access your own data at the database level. See our <a href="PRIVACY_POLICY.md">Privacy Policy</a> for full details.
+<h3>How do I report a bug or suggest a feature?</h3>
+Email <strong>support@bitesync.app</strong> with a description of the issue or suggestion. Screenshots are helpful for bug reports.
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync FAQ</span>
+  </div>
+</body>
+</html>

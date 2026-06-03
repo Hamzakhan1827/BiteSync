@@ -1,0 +1,265 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync Deployment Guide</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>Deployment Guide</h1>
+<p>How to build the Android APK and deploy the restaurant dashboard.</p>
+<hr>
+<h2>Mobile App — Android APK</h2>
+<h3>Option A: Local Gradle Build (Release APK)</h3>
+<p>Requires Android Studio installed with the Android SDK and NDK.</p>
+<pre><code>cd mobile
+<h1>1. Build the JS bundle first</h1>
+npx expo export --platform android
+<h1>2. Build the release APK via Gradle</h1>
+cd android
+.\gradlew assembleRelease
+<h1>Output: mobile/android/app/build/outputs/apk/release/app-release.apk</h1>
+</code></pre>
+<p>The release APK is already signed with the debug keystore by default. For a production-signed APK, configure your keystore in <code>android/app/build.gradle</code>.</p>
+<hr>
+<h3>Option B: EAS Build (Cloud — recommended)</h3>
+<p>Expo Application Services builds the APK on Expo's servers — no Android Studio required.</p>
+<pre><code>cd mobile
+<h1>First time: install EAS CLI and log in</h1>
+npm install -g eas-cli
+eas login
+<h1>Build a preview APK (faster, not app-store ready)</h1>
+eas build --platform android --profile preview
+<h1>Build a production AAB (Google Play ready)</h1>
+eas build --platform android --profile production
+</code></pre>
+<p>EAS configuration is in <code>mobile/eas.json</code>:</p>
+<pre><code>{
+  "build": {
+    "preview": {
+      "android": { "buildType": "apk" }
+    },
+    "production": {
+      "android": { "buildType": "app-bundle" }
+    }
+  }
+}
+</code></pre>
+<p>EAS Project ID: <code>6dfc5aab-b58a-406c-abf7-60b786269658</code></p>
+<hr>
+<h3>APK distribution</h3>
+<p>The current release APK (<code>BiteSync.apk</code> in the root) can be: <ul><li>Shared directly via WhatsApp / Google Drive for sideloading</li> <li>Distributed via Firebase App Distribution for beta testers</li> <li>Published to the Google Play Store (requires a developer account)</li> </ul> <strong>Enable sideloading on Android:</strong> Settings → Apps → Special App Access → Install Unknown Apps → allow for your file manager or browser.</p>
+<hr>
+<h2>Dashboard — Next.js</h2>
+<h3>Vercel (recommended)</h3>
+<li>Push the <code>dashboard/</code> directory to a GitHub repo (or use the monorepo root).</li>
+<li>Go to <a href="https://vercel.com">vercel.com</a>, import the repository, and set the root directory to <code>dashboard</code>.</li>
+<li>Add environment variables in the Vercel project settings:</li>
+   <pre><code>   NEXT_PUBLIC_SUPABASE_URL
+   NEXT_PUBLIC_SUPABASE_ANON_KEY
+   SUPABASE_SERVICE_ROLE_KEY
+   </code></pre>
+<li>Deploy. Vercel auto-redeploys on every push to <code>main</code>.</li>
+<h3>Manual / self-hosted</h3>
+<pre><code>cd dashboard
+npm run build      # Generates .next/ production build
+npm run start      # Starts production server on port 3000
+</code></pre>
+<p>Use a process manager like PM2 for uptime: <pre><code>npm install -g pm2 pm2 start "npm run start" --name bitesync-dashboard pm2 save </code></pre></p>
+<hr>
+<h2>Pre-deployment checklist</h2>
+<p>Before shipping a new APK or deploying the dashboard:</p>
+<ul><li>[ ] All <code>console.log</code> / <code>console.error</code> debug statements reviewed and removed</li>
+<li>[ ] Environment variables are production values (not dev Supabase project)</li>
+<li>[ ] RLS policies verified — run <code>database/security_hardening.sql</code> in production DB</li>
+<li>[ ] App version bumped in <code>mobile/app.json</code> (<code>version</code> field)</li>
+<li>[ ] Test on a real Android device (not just web)</li>
+<li>[ ] Confirm image uploads work in production Supabase Storage</li>
+<li>[ ] Confirm reviews can be submitted and updated within 5-minute window</li>
+</ul>
+<hr>
+<h2>Version numbering</h2>
+<p>BiteSync follows semantic versioning (<code>MAJOR.MINOR.PATCH</code>):</p>
+<table><thead><tr><th>Part</th><th>When to bump</th></tr></thead><tbody><tr><td>MAJOR</td><td>Breaking changes to data model or complete redesigns</td></tr>
+<tr><td>MINOR</td><td>New features (e.g. new screen, new dashboard page)</td></tr>
+<tr><td>PATCH</td><td>Bug fixes, UI tweaks, copy changes</td></tr></tbody></table>
+Update <code>version</code> in <code>mobile/app.json</code> before each APK build.
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync Deployment Guide</span>
+  </div>
+</body>
+</html>

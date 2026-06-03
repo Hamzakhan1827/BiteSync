@@ -1,0 +1,262 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BiteSync for Diners</title>
+  <style>
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
+
+* { box-sizing: border-box; margin: 0; padding: 0; }
+
+body {
+  font-family: 'Inter', -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  font-size: 11pt;
+  line-height: 1.75;
+  color: #1a1a2e;
+  background: #ffffff;
+  max-width: 800px;
+  margin: 0 auto;
+  padding: 40px 48px 60px;
+}
+
+.doc-header {
+  border-top: 6px solid #00A86B;
+  padding-top: 32px;
+  margin-bottom: 40px;
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-end;
+}
+
+.brand {
+  font-size: 13pt;
+  font-weight: 800;
+  color: #00A86B;
+  letter-spacing: -0.3px;
+}
+
+.doc-date {
+  font-size: 9pt;
+  color: #9ca3af;
+}
+
+h1 {
+  font-size: 26pt;
+  font-weight: 800;
+  color: #0b1220;
+  letter-spacing: -0.5px;
+  border-bottom: 3px solid #00A86B;
+  padding-bottom: 14px;
+  margin-bottom: 24px;
+  margin-top: 0;
+}
+
+h2 {
+  font-size: 15pt;
+  font-weight: 700;
+  color: #0b1220;
+  margin-top: 40px;
+  margin-bottom: 14px;
+  padding-bottom: 8px;
+  border-bottom: 1.5px solid #e8f5f0;
+}
+
+h3 {
+  font-size: 11pt;
+  font-weight: 700;
+  color: #00A86B;
+  margin-top: 28px;
+  margin-bottom: 10px;
+  text-transform: uppercase;
+  letter-spacing: 0.6px;
+}
+
+h4 {
+  font-size: 11pt;
+  font-weight: 600;
+  color: #374151;
+  margin-top: 18px;
+  margin-bottom: 8px;
+}
+
+blockquote {
+  border-left: 4px solid #00A86B;
+  margin: 20px 0 28px;
+  padding: 14px 20px;
+  background: #f0fdf4;
+  border-radius: 0 8px 8px 0;
+  font-size: 12pt;
+  color: #16a34a;
+  font-weight: 500;
+  font-style: italic;
+}
+
+p { margin-bottom: 12px; color: #374151; }
+
+ul, ol { margin: 8px 0 16px 20px; color: #374151; }
+li { margin-bottom: 6px; line-height: 1.7; }
+li strong { color: #0b1220; }
+
+table {
+  width: 100%;
+  border-collapse: collapse;
+  margin: 16px 0 28px;
+  font-size: 10pt;
+  border: 1.5px solid #d1fae5;
+  border-radius: 10px;
+  overflow: hidden;
+}
+
+thead tr { background: #00A86B; }
+thead th {
+  padding: 11px 14px;
+  text-align: left;
+  font-weight: 700;
+  color: #ffffff;
+  letter-spacing: 0.3px;
+}
+
+tbody tr:nth-child(even) { background: #f8fffe; }
+tbody tr:nth-child(odd) { background: #ffffff; }
+tbody td {
+  padding: 10px 14px;
+  border-bottom: 1px solid #e8f5f0;
+  color: #374151;
+  vertical-align: top;
+}
+tbody tr:last-child td { border-bottom: none; }
+
+code {
+  font-family: 'Fira Code', 'Courier New', monospace;
+  font-size: 9.5pt;
+  background: #f1f5f9;
+  padding: 2px 7px;
+  border-radius: 4px;
+  color: #0f766e;
+}
+
+pre {
+  background: #0f172a;
+  color: #e2e8f0;
+  padding: 18px 22px;
+  border-radius: 10px;
+  margin: 16px 0 24px;
+  overflow-x: auto;
+  font-size: 9pt;
+  line-height: 1.65;
+}
+
+pre code { background: none; color: inherit; padding: 0; }
+
+hr { border: none; border-top: 1.5px solid #e8f5f0; margin: 32px 0; }
+
+strong { color: #0b1220; font-weight: 700; }
+em { color: #6b7280; }
+a { color: #00A86B; text-decoration: none; }
+
+.doc-footer {
+  margin-top: 56px;
+  padding-top: 16px;
+  border-top: 1px solid #e8f5f0;
+  font-size: 9pt;
+  color: #9ca3af;
+  display: flex;
+  justify-content: space-between;
+}
+
+@media print {
+  body { padding: 0; max-width: 100%; }
+  h1, h2 { page-break-after: avoid; }
+  table, pre, blockquote { page-break-inside: avoid; }
+  .doc-header, .doc-footer { display: flex !important; }
+  @page { margin: 20mm 22mm; size: A4; }
+}
+</style>
+</head>
+<body>
+  <div class="doc-header">
+    <div class="brand">⬡ BiteSync</div>
+    <div class="doc-date">25 May 2026</div>
+  </div>
+  <h1>BiteSync for Diners</h1>
+<blockquote>Your personal food memory, every bite.</blockquote>
+<p>BiteSync is the app for people who care about what they eat. Log your meals, remember what you loved, discover what's trending near you, and leave honest feedback that actually helps restaurants improve.</p>
+<hr>
+<h2>Getting Started</h2>
+<h3>Creating your account</h3>
+<li>Download BiteSync and open the app</li>
+<li>Enter your email address and create a password</li>
+<li>Choose a display name — this is what appears on your public reviews</li>
+<li>Pick an avatar emoji to represent you</li>
+<li>You're in</li>
+<hr>
+<h2>The Home Screen</h2>
+<p>The Home screen is your discovery hub.</p>
+<strong>Search bar</strong> — Tap the search bar and start typing. Results appear as you type, showing matching restaurants and dishes. Your last 3 searches are saved for quick access.
+<strong>Your Favourite Dishes</strong> — Dishes you've hearted (❤️) appear here as a horizontal scroll. Tap any dish to jump straight to it.
+<strong>Trending Dishes</strong> — The most-reviewed and most-loved dishes across all restaurants on BiteSync. A great way to discover what to order next time.
+<strong>Restaurants</strong> — Browse all restaurants available on BiteSync. Tap one to open its full menu.
+<hr>
+<h2>Inside a Restaurant</h2>
+<p>When you open a restaurant you'll see:</p>
+<ul><li><strong>Hero photo</strong> — the restaurant's signature image</li>
+<li><strong>Open / Closed</strong> — live status based on opening hours</li>
+<li><strong>Cuisine type and price range</strong> — at a glance on the photo</li>
+<li><strong>Address</strong> — so you know exactly where it is</li>
+<li><strong>Full menu</strong> — organised by category, exactly as the restaurant has set it up</li>
+</ul>
+Tap any dish to see its detail page.
+<hr>
+<h2>Dish Detail Page</h2>
+<p>Every dish page shows you:</p>
+<ul><li><strong>Photo and price</strong></li>
+<li><strong>Popularity score</strong> — what percentage of reviewers would order this again</li>
+<li><strong>"Be the first to review"</strong> — if nobody has reviewed it yet, you can set the standard</li>
+<li><strong>Public reviews</strong> — what other diners said about this dish, with photos if they uploaded any</li>
+</ul>
+<hr>
+<h2>Leaving a Review</h2>
+<p>Tap a dish then tap the review button to rate your meal.</p>
+<h3>What you fill in:</h3>
+<strong>Thumbs Up or Thumbs Down</strong> — Did you enjoy it? One tap.
+<strong>Private Note</strong> — This is your personal food diary. Write anything — how salty it was, whether you'd change anything, a reminder for yourself. <strong>Nobody else can ever read this.</strong> Not the restaurant, not BiteSync.
+<strong>Public Note</strong> — This is what the restaurant sees and what other diners can read. Keep it honest and helpful. What would you want to know before ordering this dish?
+<strong>Photo</strong> — Optionally add a photo of your meal. It appears on the public review.
+<h3>Editing a review</h3>
+Made a typo or want to update your note? You have <strong>5 minutes</strong> after posting to edit your review. After that it's locked in — this keeps reviews honest and prevents manipulation.
+<hr>
+<h2>Your Food Diary (Profile Tab)</h2>
+<p>Every review you've ever left lives here — private notes and all. This is your personal record of every meal you've logged on BiteSync.</p>
+<p>From the diary you can: <ul><li>See every dish you've reviewed, with your private note</li> <li>Edit a recent review (within the 5-minute window)</li> <li>Delete any of your reviews</li> <li>See your <strong>review streak</strong> — how many consecutive days you've been active</li> </ul> <hr></p>
+<h2>The Review Tab</h2>
+<p>Use the Review tab when you're sitting at a restaurant and want to leave feedback right now.</p>
+<li>Tap <strong>Review</strong> in the bottom bar</li>
+<li>Search for or tap the restaurant you're at</li>
+<li>Find the dish you just ate</li>
+<li>Leave your review</li>
+<hr>
+<h2>Hearting Dishes</h2>
+<p>Tap the ❤️ heart icon on any dish to save it to your favourites. Your hearted dishes appear at the top of the Home screen so you can revisit and reorder your go-to meals easily.</p>
+<hr>
+<h2>Privacy</h2>
+<p>Your private notes are yours alone — they are never shown to restaurants, never shown to other users, and are not included in any analytics. Only your public notes and your thumbs up/down contribute to a dish's score.</p>
+<p>You can delete any of your reviews at any time from the Profile tab.</p>
+<p>Read our full <a href="PRIVACY_POLICY.md">Privacy Policy</a> for details.</p>
+<hr>
+<h2>Tips for great reviews</h2>
+<ul><li><strong>Be specific</strong> — "the karahi was slightly too oily but the flavour was excellent" is more useful than "good"</li>
+<li><strong>Add a photo</strong> — a real photo of your dish helps other diners know what to expect</li>
+<li><strong>Use the private note</strong> — write reminders for yourself ("ask for extra naan", "avoid the prawn") that you won't want to post publicly</li>
+<li><strong>Review quickly</strong> — the 5-minute edit window means your first impression stays honest</li>
+</ul>
+<hr>
+<h2>Support</h2>
+<p>Have a question or issue with the app?</p>
+<p>📧 <strong>support@bitesync.app</strong></p>
+  <div class="doc-footer">
+    <span>BiteSync — Confidential</span>
+    <span>BiteSync for Diners</span>
+  </div>
+</body>
+</html>
