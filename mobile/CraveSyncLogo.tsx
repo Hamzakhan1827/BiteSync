@@ -1,5 +1,5 @@
 import React from 'react';
-import Svg, { Circle, Rect, Path, G } from 'react-native-svg';
+import Svg, { Circle, Line, G } from 'react-native-svg';
 import { View, Text } from 'react-native';
 
 const ACCENT = '#10b981';
@@ -16,19 +16,17 @@ export function CraveSyncMark({
 }) {
   return (
     <Svg width={size} height={size} viewBox="0 0 96 96" fill="none">
+      {/* Emerald circle */}
       <Circle cx="48" cy="48" r="44" fill={accent} />
-      {/* Fork */}
-      <G fill="white">
-        <Rect x="22" y="14" width="2.8" height="14" rx="1.2" />
-        <Rect x="28.6" y="14" width="2.8" height="14" rx="1.2" />
-        <Rect x="35.2" y="14" width="2.8" height="14" rx="1.2" />
-        <Path d="M20 28h20v3c0 5-3 8-7 9v27a3 3 0 0 1-6 0V40c-4-1-7-4-7-9v-3z" />
+      {/* Inner ring for depth */}
+      <Circle cx="48" cy="48" r="34" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
+      {/* Fork + spoon handles */}
+      <G stroke="#fff" strokeWidth="4" strokeLinecap="round">
+        <Line x1="40" y1="32" x2="40" y2="64" />
+        <Line x1="56" y1="32" x2="56" y2="64" />
       </G>
-      {/* Knife */}
-      <G fill="white">
-        <Path d="M58 14c0 0 9 7 9 17H58V14z" />
-        <Rect x="55.5" y="31" width="6" height="37" rx="3" />
-      </G>
+      {/* Spoon bowl */}
+      <Circle cx="56" cy="34" r="5" fill="#fff" />
     </Svg>
   );
 }

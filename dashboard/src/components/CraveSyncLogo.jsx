@@ -15,19 +15,17 @@ export function CraveSyncMark({ size = 32, tileColor = INK, accent = ACCENT, cla
       className={className}
       {...rest}
     >
+      {/* Emerald circle */}
       <circle cx="48" cy="48" r="44" fill={accent} />
-      {/* Fork */}
-      <g fill="white">
-        <rect x="22" y="14" width="2.8" height="14" rx="1.2" />
-        <rect x="28.6" y="14" width="2.8" height="14" rx="1.2" />
-        <rect x="35.2" y="14" width="2.8" height="14" rx="1.2" />
-        <path d="M20 28h20v3c0 5-3 8-7 9v27a3 3 0 0 1-6 0V40c-4-1-7-4-7-9v-3z" />
+      {/* Inner ring for depth */}
+      <circle cx="48" cy="48" r="34" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
+      {/* Fork + spoon handles */}
+      <g stroke="#fff" strokeWidth="4" strokeLinecap="round">
+        <line x1="40" y1="32" x2="40" y2="64" />
+        <line x1="56" y1="32" x2="56" y2="64" />
       </g>
-      {/* Knife */}
-      <g fill="white">
-        <path d="M58 14c0 0 9 7 9 17H58V14z" />
-        <rect x="55.5" y="31" width="6" height="37" rx="3" />
-      </g>
+      {/* Spoon bowl */}
+      <circle cx="56" cy="34" r="5" fill="#fff" />
     </svg>
   );
 }
@@ -66,21 +64,16 @@ export function CraveSyncWordmark({ height = 32, accent = ACCENT, textColor = '#
       className={className}
       {...rest}
     >
-      {/* Emblem badge mark scaled to 64×64 */}
+      {/* Emblem badge scaled to 64×64 */}
       <g transform="scale(0.667)">
         <circle cx="48" cy="48" r="44" fill={accent} />
-        <g fill="white">
-          <rect x="22" y="14" width="2.8" height="14" rx="1.2" />
-          <rect x="28.6" y="14" width="2.8" height="14" rx="1.2" />
-          <rect x="35.2" y="14" width="2.8" height="14" rx="1.2" />
-          <path d="M20 28h20v3c0 5-3 8-7 9v27a3 3 0 0 1-6 0V40c-4-1-7-4-7-9v-3z" />
+        <circle cx="48" cy="48" r="34" fill="none" stroke="#fff" strokeWidth="2" opacity="0.5" />
+        <g stroke="#fff" strokeWidth="4" strokeLinecap="round">
+          <line x1="40" y1="32" x2="40" y2="64" />
+          <line x1="56" y1="32" x2="56" y2="64" />
         </g>
-        <g fill="white">
-          <path d="M58 14c0 0 9 7 9 17H58V14z" />
-          <rect x="55.5" y="31" width="6" height="37" rx="3" />
-        </g>
+        <circle cx="56" cy="34" r="5" fill="#fff" />
       </g>
-      {/* Wordmark text */}
       <text x="76" y="46" fontFamily='Inter, "Helvetica Neue", system-ui, sans-serif' fontWeight="700" fontSize="44" letterSpacing="-1.2" fill={textColor}>Crave</text>
       <text x="216" y="46" fontFamily='Inter, "Helvetica Neue", system-ui, sans-serif' fontWeight="700" fontSize="44" letterSpacing="-1.2" fill={accent}>Sync</text>
     </svg>
