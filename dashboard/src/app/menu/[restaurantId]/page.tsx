@@ -59,6 +59,21 @@ export default async function RestaurantMenuPage({ params }: { params: Promise<{
     .select('id, name')
     .eq('restaurant_id', restaurantId);
 
+  // Format menuItems to match MenuItem type (flattening menu_categories array if needed)
+  const formattedMenuItems = menuItems?.map(item => ({
+    id: item.id,
+    name: item.name,
+    price: item.price,
+    description: item.description,
+    image_url: item.image_url,
+    category_id: item.category_id,
+    menu_categories: Array.isArray(item.menu_categories)
+      ? item.menu_categories[0]
+      : item.menu_categories
+        ? (item.menu_categories as any)
+        : undefined
+  })) || [];
+
   return (
     <>
       <Header title={`Menu Manager: ${restaurant?.name || 'Restaurant'}`} />
@@ -70,7 +85,7 @@ export default async function RestaurantMenuPage({ params }: { params: Promise<{
             </Link>
           )}
             <MenuManager 
-              initialItems={menuItems || []} 
+              initialItems={formattedMenuItems} 
               categories={categories || []} 
               restaurantId={restaurantId} 
               restaurantName={restaurant?.name}

@@ -29,7 +29,10 @@ export async function Sidebar() {
       planName = "Platform Owner";
       initial = "⚡";
     } else if (profile?.restaurants) {
-      displayName = profile.restaurants.name;
+      const restData = profile.restaurants as any;
+      displayName = Array.isArray(restData)
+        ? (restData[0]?.name || "My Restaurant")
+        : (restData?.name || "My Restaurant");
       planName = "Pro Plan";
       initial = displayName.charAt(0).toUpperCase();
     } else {
@@ -51,7 +54,7 @@ export async function Sidebar() {
           <Link href="/" className="flex items-center gap-[10px] min-w-max">
             <CraveSyncMark size={30} className="shrink-0" />
             <span className="opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 whitespace-nowrap font-bold tracking-tight text-slate-900 dark:text-slate-200" style={{ fontSize: 24, letterSpacing: '-0.02em' }}>
-              Bite<span className="text-emerald-500 dark:text-emerald-400">Sync</span>
+              Crave<span className="text-emerald-500 dark:text-emerald-400">Sync</span>
             </span>
           </Link>
         </div>
