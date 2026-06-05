@@ -59,7 +59,7 @@ export function CampaignSettings({ restaurantId, recoveryEmailsEnabled, winbackE
         <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 leading-relaxed">
           <li>• Recovery emails fire automatically when a thumbs-down review is submitted</li>
           <li>• Win-back emails run daily — one email per customer per 30 days</li>
-          <li>• Emails are sent under your restaurant name via BiteSync</li>
+          <li>• Emails are sent under your restaurant name via CraveSync</li>
         </ul>
       </div>
 

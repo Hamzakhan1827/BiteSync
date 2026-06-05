@@ -1,5 +1,5 @@
-# 🚀 BiteSync: The Masterplan (1-Year Execution Strategy)
-**Project Name:** BiteSync (You can change this later, but it reflects syncing bites/data)
+# 🚀 CraveSync: The Masterplan (1-Year Execution Strategy)
+**Project Name:** CraveSync (You can change this later, but it reflects syncing bites/data)
 **Core Philosophy:** Data is the highest priority. Without pristine, well-structured data, there is no product. We build slowly, precisely, and with no haste. 
 **Target Output:** A robust Android APK for users and a Web Dashboard for restaurants.
 

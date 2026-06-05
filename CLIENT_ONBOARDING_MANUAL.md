@@ -1,6 +1,6 @@
-# 🏢 BiteSync Client Onboarding Manual
+# 🏢 CraveSync Client Onboarding Manual
 
-This document outlines the standard operating procedure (SOP) for adding a new restaurant client (e.g., Burger Lab, KFC) to the BiteSync platform. 
+This document outlines the standard operating procedure (SOP) for adding a new restaurant client (e.g., Burger Lab, KFC) to the CraveSync platform. 
 
 By following these 3 steps, the client will instantly gain access to their secure, locked-down dashboard. No code changes are required.
 
@@ -37,4 +37,4 @@ By following these 3 steps, the client will instantly gain access to their secur
 ### 🎉 Success!
 You can now email the client their login credentials. The moment they log into `localhost:3000` (or your live domain), the dashboard will dynamically adapt to display their specific restaurant name and filter their analytics.
 
-*(Note: In the future, this entire process will be automated via a 1-click "Add Client" button inside your BiteSync Network Super Admin Dashboard).*
+*(Note: In the future, this entire process will be automated via a 1-click "Add Client" button inside your CraveSync Network Super Admin Dashboard).*

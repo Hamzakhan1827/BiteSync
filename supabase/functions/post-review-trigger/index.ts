@@ -359,7 +359,7 @@ function buildEmailHtml(restaurantName: string, body: string, logoUrl: string | 
     ${paragraphs}
   </div>
   <p style="font-size:11px;color:#9ca3af;border-top:1px solid #f3f4f6;padding-top:16px;margin:0;">
-    Sent by ${restaurantName} via <strong>BiteSync</strong>. You received this because you left a public review.
+    Sent by ${restaurantName} via <strong>CraveSync</strong>. You received this because you left a public review.
   </p>
 </body>
 </html>`

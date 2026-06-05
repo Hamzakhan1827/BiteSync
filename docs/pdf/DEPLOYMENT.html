@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BiteSync Deployment Guide</title>
+  <title>CraveSync Deployment Guide</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
 
@@ -176,7 +176,7 @@ a { color: #00A86B; text-decoration: none; }
 </head>
 <body>
   <div class="doc-header">
-    <div class="brand">⬡ BiteSync</div>
+    <div class="brand">⬡ CraveSync</div>
     <div class="doc-date">25 May 2026</div>
   </div>
   <h1>Deployment Guide</h1>
@@ -221,7 +221,7 @@ eas build --platform android --profile production
 <p>EAS Project ID: <code>6dfc5aab-b58a-406c-abf7-60b786269658</code></p>
 <hr>
 <h3>APK distribution</h3>
-<p>The current release APK (<code>BiteSync.apk</code> in the root) can be: <ul><li>Shared directly via WhatsApp / Google Drive for sideloading</li> <li>Distributed via Firebase App Distribution for beta testers</li> <li>Published to the Google Play Store (requires a developer account)</li> </ul> <strong>Enable sideloading on Android:</strong> Settings → Apps → Special App Access → Install Unknown Apps → allow for your file manager or browser.</p>
+<p>The current release APK (<code>CraveSync.apk</code> in the root) can be: <ul><li>Shared directly via WhatsApp / Google Drive for sideloading</li> <li>Distributed via Firebase App Distribution for beta testers</li> <li>Published to the Google Play Store (requires a developer account)</li> </ul> <strong>Enable sideloading on Android:</strong> Settings → Apps → Special App Access → Install Unknown Apps → allow for your file manager or browser.</p>
 <hr>
 <h2>Dashboard — Next.js</h2>
 <h3>Vercel (recommended)</h3>
@@ -238,7 +238,7 @@ eas build --platform android --profile production
 npm run build      # Generates .next/ production build
 npm run start      # Starts production server on port 3000
 </code></pre>
-<p>Use a process manager like PM2 for uptime: <pre><code>npm install -g pm2 pm2 start "npm run start" --name bitesync-dashboard pm2 save </code></pre></p>
+<p>Use a process manager like PM2 for uptime: <pre><code>npm install -g pm2 pm2 start "npm run start" --name cravesync-dashboard pm2 save </code></pre></p>
 <hr>
 <h2>Pre-deployment checklist</h2>
 <p>Before shipping a new APK or deploying the dashboard:</p>
@@ -252,14 +252,14 @@ npm run start      # Starts production server on port 3000
 </ul>
 <hr>
 <h2>Version numbering</h2>
-<p>BiteSync follows semantic versioning (<code>MAJOR.MINOR.PATCH</code>):</p>
+<p>CraveSync follows semantic versioning (<code>MAJOR.MINOR.PATCH</code>):</p>
 <table><thead><tr><th>Part</th><th>When to bump</th></tr></thead><tbody><tr><td>MAJOR</td><td>Breaking changes to data model or complete redesigns</td></tr>
 <tr><td>MINOR</td><td>New features (e.g. new screen, new dashboard page)</td></tr>
 <tr><td>PATCH</td><td>Bug fixes, UI tweaks, copy changes</td></tr></tbody></table>
 Update <code>version</code> in <code>mobile/app.json</code> before each APK build.
   <div class="doc-footer">
-    <span>BiteSync — Confidential</span>
-    <span>BiteSync Deployment Guide</span>
+    <span>CraveSync — Confidential</span>
+    <span>CraveSync Deployment Guide</span>
   </div>
 </body>
 </html>

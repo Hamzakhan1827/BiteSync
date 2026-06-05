@@ -1,5 +1,5 @@
 -- ============================================================
--- BiteSync: DB-Level Review Rate Limiting
+-- CraveSync: DB-Level Review Rate Limiting
 -- Enforces limits that the mobile client already checks,
 -- but now they cannot be bypassed by direct API calls.
 --

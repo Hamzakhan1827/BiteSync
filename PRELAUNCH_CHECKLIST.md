@@ -1,4 +1,4 @@
-# BiteSync — Pre-Launch & Deferred Work Master List
+# CraveSync — Pre-Launch & Deferred Work Master List
 
 ---
 
@@ -43,7 +43,7 @@ ALTER TABLE public.reviews
 ### Mobile App — Missing Features Found in Audit
 - [ ] **No "Delete My Review" button** — `DATABASE_ACCESS_AUDIT.md` line 96 explicitly flags this. The RLS policy exists but the UI doesn't. A user with a bad review has no way to remove it.
 - [ ] **Offline Mode** — `MASTERPLAN.md` Week 25-26 planned this. Currently if the user has no internet the whole app shows empty. Should cache the last known restaurant list and diary in AsyncStorage.
-- [ ] **QR Code Scanner** — `MASTERPLAN.md` Week 19-20 planned a QR scanner so users can scan a table code to instantly open the right restaurant menu. This is the killer feature that makes BiteSync feel premium in restaurants.
+- [ ] **QR Code Scanner** — `MASTERPLAN.md` Week 19-20 planned a QR scanner so users can scan a table code to instantly open the right restaurant menu. This is the killer feature that makes CraveSync feel premium in restaurants.
 - [ ] **Confetti animation on review submit** — `MASTERPLAN.md` Week 39-40 planned micro-animations. The current success toast is a simple modal. A confetti burst would make the experience feel 10x better.
 - [ ] **Search placeholder has typo** — `App.tsx:1385` has `"Search restaurants or dishes ??"` — the `??` is a typo leftover. Fix to `"Search restaurants or dishes..."`.
 

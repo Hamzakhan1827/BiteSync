@@ -1,4 +1,4 @@
-# BiteSync Security Implementation Guide
+# CraveSync Security Implementation Guide
 
 ## Overview
 This guide covers the security enhancements implemented on May 10, 2026. All changes maintain backward compatibility and do not break existing functionality.
@@ -61,7 +61,7 @@ This guide covers the security enhancements implemented on May 10, 2026. All cha
 
 **Integration in App.tsx**:
 ```typescript
-const authRateLimiter = useRef(new RateLimiter('bitesync_auth_attempts', 5, 900000)).current;
+const authRateLimiter = useRef(new RateLimiter('cravesync_auth_attempts', 5, 900000)).current;
 ```
 
 ### ✅ Email Validation (new function)

@@ -1,10 +1,10 @@
-# BiteSync - How to Start Everything
+# CraveSync - How to Start Everything
 
 ## Every time you open your PC, run these commands:
 
 ### 1. Mobile App (Terminal 1)
 ```
-cd F:\antigravity\projects\BiteSync\mobile
+cd F:\antigravity\projects\CraveSync\mobile
 npx expo start --tunnel
 ```
 - Wait for QR code to appear
@@ -13,7 +13,7 @@ npx expo start --tunnel
 
 ### 2. Dashboard (Terminal 2)
 ```
-cd F:\antigravity\projects\BiteSync\dashboard
+cd F:\antigravity\projects\CraveSync\dashboard
 npm run dev
 ```
 - Open browser → localhost:3000

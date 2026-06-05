@@ -1,12 +1,12 @@
 # Security Model
 
-BiteSync handles personal food diaries and private user notes. This document explains how data is protected at every layer.
+CraveSync handles personal food diaries and private user notes. This document explains how data is protected at every layer.
 
 ---
 
 ## Authentication
 
-BiteSync uses **Supabase Auth** with email + password.
+CraveSync uses **Supabase Auth** with email + password.
 
 - On signup, a trigger (`database/auth_trigger.sql`) automatically creates a matching row in the public `users` table, linking `auth.uid()` to the user's profile.
 - All client requests are made with the **anon key** — a safe, public key. It only grants access to what RLS policies explicitly allow.

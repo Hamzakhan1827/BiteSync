@@ -1,28 +1,28 @@
-# BiteSync for Restaurants
+# CraveSync for Restaurants
 
 > Turn every meal into actionable feedback — automatically.
 
-BiteSync gives your restaurant a live window into what your customers actually think about every dish on your menu. No surveys. No paper forms. Just honest, real-time feedback from diners who visited your restaurant.
+CraveSync gives your restaurant a live window into what your customers actually think about every dish on your menu. No surveys. No paper forms. Just honest, real-time feedback from diners who visited your restaurant.
 
 ---
 
 ## What You Get
 
 ### 1. A Live Feedback Feed
-Every time a diner reviews one of your dishes on BiteSync, you see it instantly in your dashboard. You know exactly which items are loved, which need work, and what people are saying — item by item, not just a blanket star rating.
+Every time a diner reviews one of your dishes on CraveSync, you see it instantly in your dashboard. You know exactly which items are loved, which need work, and what people are saying — item by item, not just a blanket star rating.
 
 ### 2. Menu Performance Insights
 See which dishes receive the most positive feedback and which ones consistently disappoint. Make menu decisions based on real customer data, not guesswork.
 
 ### 3. Full Menu Control
-Add, edit, or remove dishes from your menu directly through the BiteSync dashboard. Organise items into categories (e.g. "Karahi & Handi", "BBQ Specials") exactly the way you want them to appear in the app.
+Add, edit, or remove dishes from your menu directly through the CraveSync dashboard. Organise items into categories (e.g. "Karahi & Handi", "BBQ Specials") exactly the way you want them to appear in the app.
 
 ---
 
 ## Getting Started
 
-### Step 1 — Your restaurant is added to BiteSync
-The BiteSync team adds your restaurant to the platform, including your menu, photos, price range, cuisine type, and opening hours. You don't need to do this yourself for the initial setup.
+### Step 1 — Your restaurant is added to CraveSync
+The CraveSync team adds your restaurant to the platform, including your menu, photos, price range, cuisine type, and opening hours. You don't need to do this yourself for the initial setup.
 
 ### Step 2 — You receive your dashboard login
 You'll get an email with your dashboard credentials. Log in at your dashboard URL using those details.
@@ -31,7 +31,7 @@ You'll get an email with your dashboard credentials. Log in at your dashboard UR
 Once logged in, check that your restaurant details, categories, and menu items are correct. You can edit anything at any time.
 
 ### Step 4 — Diners start reviewing
-When customers dine at your restaurant and review dishes on the BiteSync app, their public feedback appears in your dashboard immediately.
+When customers dine at your restaurant and review dishes on the CraveSync app, their public feedback appears in your dashboard immediately.
 
 ### Step 5 — Act on the data
 Use the insights to identify your strongest dishes, address recurring complaints, and understand your customers better than ever before.
@@ -79,14 +79,14 @@ An item is marked **Popular** when it has received enough reviews and the majori
 
 ## What Customers Experience
 
-Customers using the BiteSync app can:
+Customers using the CraveSync app can:
 - Browse your restaurant and full menu
 - Tap any dish and leave a review after eating
 - Add a photo of their meal
 - Keep a private food diary of everything they've eaten
 - See which dishes are trending and loved by other diners
 
-The app is free for customers. There are no pop-ups, no paid placements — BiteSync is built on honest feedback.
+The app is free for customers. There are no pop-ups, no paid placements — CraveSync is built on honest feedback.
 
 ---
 
@@ -95,7 +95,7 @@ The app is free for customers. There are no pop-ups, no paid placements — Bite
 - Customer names appear on public reviews only because the customer chose to post publicly
 - Private notes written by customers are **never** shared with restaurants — they are encrypted and user-only
 - You cannot see who gave a thumbs down without a written note
-- BiteSync does not sell individual customer data to third parties
+- CraveSync does not sell individual customer data to third parties
 
 See our full [Privacy Policy](PRIVACY_POLICY.md) for details.
 
@@ -105,6 +105,6 @@ See our full [Privacy Policy](PRIVACY_POLICY.md) for details.
 
 For any questions about your dashboard, menu setup, or account access:
 
-📧 **support@bitesync.app**
+📧 **support@cravesync.app**
 
 Response time: within 24 hours on business days.

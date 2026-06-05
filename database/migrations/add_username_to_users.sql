@@ -1,5 +1,5 @@
 -- ============================================================
--- BiteSync: Add username column to public.users
+-- CraveSync: Add username column to public.users
 -- Keeps username in sync so reviews can display it via JOIN.
 -- Run in Supabase SQL Editor.
 -- ============================================================
@@ -14,14 +14,14 @@ FROM auth.users au
 WHERE au.id = pu.id
   AND au.raw_user_meta_data->>'username' IS NOT NULL;
 
--- 3. Fix full_name for users still stuck on the 'BiteSync Diner' default
+-- 3. Fix full_name for users still stuck on the 'CraveSync Diner' default
 --    Replace it with their chosen username from auth metadata
 UPDATE public.users pu
 SET full_name = au.raw_user_meta_data->>'username'
 FROM auth.users au
 WHERE au.id = pu.id
   AND au.raw_user_meta_data->>'username' IS NOT NULL
-  AND (pu.full_name = 'BiteSync Diner' OR pu.full_name IS NULL);
+  AND (pu.full_name = 'CraveSync Diner' OR pu.full_name IS NULL);
 
 -- 4. Update the handle_new_user trigger to also write username on signup
 CREATE OR REPLACE FUNCTION public.handle_new_user()

@@ -1,4 +1,4 @@
--- BiteSync v2 migrations — run in Supabase SQL Editor
+-- CraveSync v2 migrations — run in Supabase SQL Editor
 
 -- 1. Add cuisine_type and opening_hours to restaurants
 ALTER TABLE restaurants ADD COLUMN IF NOT EXISTS cuisine_type TEXT;

@@ -1,6 +1,6 @@
-# BiteSync Market Validation & Research Strategy
+# CraveSync Market Validation & Research Strategy
 
-This document outlines the strategic steps to validate the **BiteSync** concept, brand, and features before a full market push. The goal is to move from "I think this is a problem" to "I have data that proves this is a problem."
+This document outlines the strategic steps to validate the **CraveSync** concept, brand, and features before a full market push. The goal is to move from "I think this is a problem" to "I have data that proves this is a problem."
 
 ---
 

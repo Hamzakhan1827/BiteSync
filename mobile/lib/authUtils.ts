@@ -1,4 +1,4 @@
-// BiteSync Auth Utilities - Password Validation & Rate Limiting
+// CraveSync Auth Utilities - Password Validation & Rate Limiting
 // Place this in mobile/lib/authUtils.ts
 
 interface PasswordStrengthResult {

@@ -1,4 +1,4 @@
--- BiteSync Database Schema
+-- CraveSync Database Schema
 -- Optimized for PostgreSQL (Supabase)
 
 -- Enable UUID extension

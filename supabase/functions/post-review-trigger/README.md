@@ -17,7 +17,7 @@ Set these in your Supabase project → Settings → Edge Functions → Secrets:
 | `WEBHOOK_SECRET` | A random secret string you choose (e.g. `openssl rand -hex 32`) |
 | `OPENAI_API_KEY` | Your OpenAI API key |
 | `RESEND_API_KEY` | Your Resend API key |
-| `RESEND_DOMAIN` | Verified sending domain (e.g. `bitesync.app`). Must be verified in Resend. |
+| `RESEND_DOMAIN` | Verified sending domain (e.g. `cravesync.app`). Must be verified in Resend. |
 
 `SUPABASE_URL` and `SUPABASE_SERVICE_ROLE_KEY` are injected automatically by the runtime.
 

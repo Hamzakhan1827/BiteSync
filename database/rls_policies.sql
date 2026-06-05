@@ -1,4 +1,4 @@
--- BiteSync Row Level Security (RLS) Policies
+-- CraveSync Row Level Security (RLS) Policies
 -- This ensures your database cannot be hacked or abused from the frontend
 
 -- 1. Enable RLS on all tables

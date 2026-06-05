@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BiteSync Development Guide</title>
+  <title>CraveSync Development Guide</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
 
@@ -176,11 +176,11 @@ a { color: #00A86B; text-decoration: none; }
 </head>
 <body>
   <div class="doc-header">
-    <div class="brand">⬡ BiteSync</div>
+    <div class="brand">⬡ CraveSync</div>
     <div class="doc-date">25 May 2026</div>
   </div>
   <h1>Development Guide</h1>
-<p>Everything you need to run BiteSync locally from scratch.</p>
+<p>Everything you need to run CraveSync locally from scratch.</p>
 <hr>
 <h2>Prerequisites</h2>
 <table><thead><tr><th>Tool</th><th>Minimum Version</th><th>Install</th></tr></thead><tbody><tr><td>Node.js</td><td>18.x</td><td>https://nodejs.org</td></tr>
@@ -242,7 +242,7 @@ npm run dev
 <h3>Mobile App</h3>
 <pre><code>mobile/
 ├── App.tsx              ← All screens, navigation, and business logic
-├── BiteSyncLogo.tsx     ← Reusable logo SVG component
+├── CraveSyncLogo.tsx     ← Reusable logo SVG component
 ├── lib/
 │   └── supabase.ts      ← Supabase client initialisation
 ├── assets/              ← Icons, splash, logo
@@ -272,7 +272,7 @@ npm run dev
 <li>Supabase calls always destructure <code>{ data, error }</code> and handle both paths</li>
 </ul>
 <h3>Naming</h3>
-<table><thead><tr><th>Type</th><th>Convention</th><th>Example</th></tr></thead><tbody><tr><td>Components</td><td>PascalCase</td><td><code>BiteSyncLogo</code></td></tr>
+<table><thead><tr><th>Type</th><th>Convention</th><th>Example</th></tr></thead><tbody><tr><td>Components</td><td>PascalCase</td><td><code>CraveSyncLogo</code></td></tr>
 <tr><td>State variables</td><td>camelCase</td><td><code>selectedRestaurant</code></td></tr>
 <tr><td>Handlers</td><td><code>handle*</code> or verb phrase</td><td><code>handleRestaurantSelect</code>, <code>submitReview</code></td></tr>
 <tr><td>Styles</td><td>camelCase</td><td><code>styles.menuCard</code></td></tr>
@@ -289,8 +289,8 @@ Write your SQL in <code>database/migrations/</code> with a timestamp prefix:
 </code></pre>
 Then run it in the Supabase SQL Editor.
 <h3>Reset local search history</h3>
-Search history is stored in <code>AsyncStorage</code> under the key <code>bitesync_search_history</code>. Clear it with:
-<pre><code>await AsyncStorage.removeItem('bitesync_search_history');
+Search history is stored in <code>AsyncStorage</code> under the key <code>cravesync_search_history</code>. Clear it with:
+<pre><code>await AsyncStorage.removeItem('cravesync_search_history');
 </code></pre>
 <hr>
 <h2>Troubleshooting</h2>
@@ -300,8 +300,8 @@ Search history is stored in <code>AsyncStorage</code> under the key <code>bitesy
 <tr><td>RLS blocking an update</td><td>Check <code>database/reviews_rls_complete.sql</code> — the UPDATE policy requires <code>auth.uid() = user_id</code></td></tr>
 <tr><td>Android build fails</td><td>Ensure Android Studio + NDK are installed; run <code>cd android && ./gradlew clean</code></td></tr></tbody></table>
   <div class="doc-footer">
-    <span>BiteSync — Confidential</span>
-    <span>BiteSync Development Guide</span>
+    <span>CraveSync — Confidential</span>
+    <span>CraveSync Development Guide</span>
   </div>
 </body>
 </html>

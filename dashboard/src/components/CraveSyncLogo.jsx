@@ -1,4 +1,4 @@
-// BiteSyncLogo.jsx — drop-in React component for the BiteSync mark + wordmark.
+// CraveSyncLogo.jsx — drop-in React component for the CraveSync mark + wordmark.
 // No deps. Tailwind-friendly. SSR-safe. Backgrounds are transparent.
 // Mark: "Sculpted B" — rounded tile, geometric B, fork on the upper-left edge,
 // spoon-curl tucked into the upper bowl.
@@ -8,7 +8,7 @@ import React from 'react';
 const ACCENT = '#10b981';
 const INK = '#0b1220';
 
-export function BiteSyncMark({ size = 32, tileColor = INK, accent = ACCENT, className, ...rest }) {
+export function CraveSyncMark({ size = 32, tileColor = INK, accent = ACCENT, className, ...rest }) {
   return (
     <svg
       width={size}
@@ -16,7 +16,7 @@ export function BiteSyncMark({ size = 32, tileColor = INK, accent = ACCENT, clas
       viewBox="0 0 96 96"
       fill="none"
       role="img"
-      aria-label="BiteSync"
+      aria-label="CraveSync"
       className={className}
       {...rest}
     >
@@ -43,14 +43,14 @@ export function BiteSyncMark({ size = 32, tileColor = INK, accent = ACCENT, clas
   );
 }
 
-export function BiteSyncLogo({ size = 28, accent = ACCENT, textColor = '#ffffff', tileColor = INK, gap = 10, className, ...rest }) {
+export function CraveSyncLogo({ size = 28, accent = ACCENT, textColor = '#ffffff', tileColor = INK, gap = 10, className, ...rest }) {
   return (
     <span
       className={className}
       style={{ display: 'inline-flex', alignItems: 'center', gap, lineHeight: 1 }}
       {...rest}
     >
-      <BiteSyncMark size={size * 1.4} tileColor={tileColor} accent={accent} />
+      <CraveSyncMark size={size * 1.4} tileColor={tileColor} accent={accent} />
       <span
         style={{
           fontFamily: 'Inter, "Helvetica Neue", system-ui, -apple-system, sans-serif',
@@ -66,14 +66,14 @@ export function BiteSyncLogo({ size = 28, accent = ACCENT, textColor = '#ffffff'
   );
 }
 
-export function BiteSyncWordmark({ height = 32, accent = ACCENT, textColor = '#ffffff', className, ...rest }) {
+export function CraveSyncWordmark({ height = 32, accent = ACCENT, textColor = '#ffffff', className, ...rest }) {
   return (
     <svg
       viewBox="0 0 296 64"
       height={height}
       fill="none"
       role="img"
-      aria-label="BiteSync"
+      aria-label="CraveSync"
       className={className}
       {...rest}
     >
@@ -101,4 +101,4 @@ export function BiteSyncWordmark({ height = 32, accent = ACCENT, textColor = '#f
   );
 }
 
-export default BiteSyncLogo;
+export default CraveSyncLogo;

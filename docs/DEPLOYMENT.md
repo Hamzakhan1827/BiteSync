@@ -66,7 +66,7 @@ EAS Project ID: `6dfc5aab-b58a-406c-abf7-60b786269658`
 
 ### APK distribution
 
-The current release APK (`BiteSync.apk` in the root) can be:
+The current release APK (`CraveSync.apk` in the root) can be:
 - Shared directly via WhatsApp / Google Drive for sideloading
 - Distributed via Firebase App Distribution for beta testers
 - Published to the Google Play Store (requires a developer account)
@@ -101,7 +101,7 @@ npm run start      # Starts production server on port 3000
 Use a process manager like PM2 for uptime:
 ```bash
 npm install -g pm2
-pm2 start "npm run start" --name bitesync-dashboard
+pm2 start "npm run start" --name cravesync-dashboard
 pm2 save
 ```
 
@@ -123,7 +123,7 @@ Before shipping a new APK or deploying the dashboard:
 
 ## Version numbering
 
-BiteSync follows semantic versioning (`MAJOR.MINOR.PATCH`):
+CraveSync follows semantic versioning (`MAJOR.MINOR.PATCH`):
 
 | Part | When to bump |
 |------|-------------|

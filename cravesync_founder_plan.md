@@ -1,4 +1,4 @@
-# BiteSync — 4-Week Founder-Level Plan
+# CraveSync — 4-Week Founder-Level Plan
 ### Co-founder & Business Advisor Brief | Hamza | Karachi, 2026
 
 ---
@@ -411,7 +411,7 @@ This is a sales sprint, not a marketing campaign. Do it yourself. No ads.
 
 **LinkedIn:**
 - Search: "restaurant owner Karachi" / "F&B operations Pakistan"
-- Message template: "Hi [Name] — I'm building BiteSync, a feedback tool for restaurants. Your [restaurant name] came up in my research. Would love 15 mins — not selling, just learning. Worth your time?"
+- Message template: "Hi [Name] — I'm building CraveSync, a feedback tool for restaurants. Your [restaurant name] came up in my research. Would love 15 mins — not selling, just learning. Worth your time?"
 - Connect → wait 2 days → message. Don't message on connect request.
 
 **Direct Walk-In (highest conversion):**
@@ -454,7 +454,7 @@ This is a sales sprint, not a marketing campaign. Do it yourself. No ads.
 
 **Cadence:**
 - LinkedIn: 3 posts/week
-- Newsletter (Substack/Beehiiv): 1 post/week — "BiteSync Weekly: Karachi Food Intelligence"
+- Newsletter (Substack/Beehiiv): 1 post/week — "CraveSync Weekly: Karachi Food Intelligence"
 - Twitter/X: Daily thoughts, 1 thread/week
 
 **The Power Move:** Every week, share one anonymized restaurant insight publicly. "Karachi restaurants with 4+ star biryani feedback have 2.3x repeat visit rates." This builds the perception of data authority before you have 100 restaurants.
@@ -470,7 +470,7 @@ This is a sales sprint, not a marketing campaign. Do it yourself. No ads.
 - [ ] First analytics report sent (even manually compiled)
 - [ ] Product stable: feedback submission → dashboard working end-to-end
 - [ ] Pricing page live with 3 tiers
-- [ ] 1 LinkedIn post: "BiteSync just went live with our first restaurant partner in Karachi"
+- [ ] 1 LinkedIn post: "CraveSync just went live with our first restaurant partner in Karachi"
 - [ ] 1 paying customer (even PKR 1 to validate willingness to pay)
 
 **Do NOT:**
@@ -540,7 +540,7 @@ This is a sales sprint, not a marketing campaign. Do it yourself. No ads.
 
 ---
 
-### 4.3 Product-Market Fit Signals for BiteSync
+### 4.3 Product-Market Fit Signals for CraveSync
 
 **You have NOT found PMF if:**
 - Restaurants sign up but rarely log in
@@ -556,7 +556,7 @@ This is a sales sprint, not a marketing campaign. Do it yourself. No ads.
 - Restaurants upgrade plans without a sales call
 
 **The PMF Survey (Sean Ellis Test):**
-After 60 days of use, ask restaurant managers: "How would you feel if you could no longer use BiteSync?"
+After 60 days of use, ask restaurant managers: "How would you feel if you could no longer use CraveSync?"
 - Very disappointed: target >40%
 - If <40%: dig into why and iterate
 
@@ -621,7 +621,7 @@ This is your unfair advantage that no competitor can replicate overnight.
 
 ---
 
-## Final Note: What Will Actually Kill BiteSync
+## Final Note: What Will Actually Kill CraveSync
 
 1. **Not talking to enough restaurants before building more.** Do the 10 conversations. Really.
 2. **Building features instead of driving activation.** Your job in Month 1 is not to code — it's to ensure every restaurant gets 50 feedback entries.
@@ -631,5 +631,5 @@ This is your unfair advantage that no competitor can replicate overnight.
 
 ---
 
-*Built for Hamza | BiteSync | Karachi, Pakistan | May 2026*
+*Built for Hamza | CraveSync | Karachi, Pakistan | May 2026*
 *This document is a living strategic brief — update it as your discovery conversations reshape your understanding.*

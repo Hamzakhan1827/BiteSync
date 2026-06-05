@@ -1,5 +1,5 @@
 -- ============================================================
--- BiteSync Security Hardening
+-- CraveSync Security Hardening
 -- Run in Supabase SQL Editor AFTER reviews_rls_complete.sql
 -- ============================================================
 

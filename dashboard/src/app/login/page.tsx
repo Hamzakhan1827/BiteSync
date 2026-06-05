@@ -13,7 +13,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
             </div>
           </div>
 
-          <h2 className="text-2xl font-bold text-center text-slate-900 dark:text-slate-100 mb-2">BiteSync Admin</h2>
+          <h2 className="text-2xl font-bold text-center text-slate-900 dark:text-slate-100 mb-2">CraveSync Admin</h2>
           <p className="text-center text-slate-500 dark:text-slate-400 mb-8">Sign in to manage your restaurant data</p>
 
           <LoginForm error={error} />
@@ -23,7 +23,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
           <p className="text-sm text-slate-500 dark:text-slate-400">
             Don't have an account?{' '}
             <a href="#" className="text-indigo-600 dark:text-indigo-400 font-semibold hover:underline">
-              Contact BiteSync Sales
+              Contact CraveSync Sales
             </a>
           </p>
         </div>

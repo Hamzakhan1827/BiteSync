@@ -1,15 +1,15 @@
-# BiteSync for Diners
+# CraveSync for Diners
 
 > Your personal food memory, every bite.
 
-BiteSync is the app for people who care about what they eat. Log your meals, remember what you loved, discover what's trending near you, and leave honest feedback that actually helps restaurants improve.
+CraveSync is the app for people who care about what they eat. Log your meals, remember what you loved, discover what's trending near you, and leave honest feedback that actually helps restaurants improve.
 
 ---
 
 ## Getting Started
 
 ### Creating your account
-1. Download BiteSync and open the app
+1. Download CraveSync and open the app
 2. Enter your email address and create a password
 3. Choose a display name — this is what appears on your public reviews
 4. Pick an avatar emoji to represent you
@@ -25,9 +25,9 @@ The Home screen is your discovery hub.
 
 **Your Favourite Dishes** — Dishes you've hearted (❤️) appear here as a horizontal scroll. Tap any dish to jump straight to it.
 
-**Trending Dishes** — The most-reviewed and most-loved dishes across all restaurants on BiteSync. A great way to discover what to order next time.
+**Trending Dishes** — The most-reviewed and most-loved dishes across all restaurants on CraveSync. A great way to discover what to order next time.
 
-**Restaurants** — Browse all restaurants available on BiteSync. Tap one to open its full menu.
+**Restaurants** — Browse all restaurants available on CraveSync. Tap one to open its full menu.
 
 ---
 
@@ -64,7 +64,7 @@ Tap a dish then tap the review button to rate your meal.
 
 **Thumbs Up or Thumbs Down** — Did you enjoy it? One tap.
 
-**Private Note** — This is your personal food diary. Write anything — how salty it was, whether you'd change anything, a reminder for yourself. **Nobody else can ever read this.** Not the restaurant, not BiteSync.
+**Private Note** — This is your personal food diary. Write anything — how salty it was, whether you'd change anything, a reminder for yourself. **Nobody else can ever read this.** Not the restaurant, not CraveSync.
 
 **Public Note** — This is what the restaurant sees and what other diners can read. Keep it honest and helpful. What would you want to know before ordering this dish?
 
@@ -77,7 +77,7 @@ Made a typo or want to update your note? You have **5 minutes** after posting to
 
 ## Your Food Diary (Profile Tab)
 
-Every review you've ever left lives here — private notes and all. This is your personal record of every meal you've logged on BiteSync.
+Every review you've ever left lives here — private notes and all. This is your personal record of every meal you've logged on CraveSync.
 
 From the diary you can:
 - See every dish you've reviewed, with your private note
@@ -127,4 +127,4 @@ Read our full [Privacy Policy](PRIVACY_POLICY.md) for details.
 
 Have a question or issue with the app?
 
-📧 **support@bitesync.app**
+📧 **support@cravesync.app**

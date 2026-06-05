@@ -1,6 +1,6 @@
 # Architecture
 
-This document covers how BiteSync is structured, how data flows through the system, and the decisions behind the design.
+This document covers how CraveSync is structured, how data flows through the system, and the decisions behind the design.
 
 ---
 
@@ -77,7 +77,7 @@ App
 
 ### 2. Restaurant Dashboard (`/dashboard`)
 
-A Next.js 14 App Router application used by restaurant operators and the BiteSync admin team.
+A Next.js 14 App Router application used by restaurant operators and the CraveSync admin team.
 
 **Key pages:**
 - `/` — Login

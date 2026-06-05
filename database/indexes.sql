@@ -1,5 +1,5 @@
 -- ============================================================
--- BiteSync: Performance Indexes for 100k+ Users
+-- CraveSync: Performance Indexes for 100k+ Users
 -- Run in Supabase SQL Editor
 --
 -- NOTE: indexes from review_rate_limit.sql already cover:

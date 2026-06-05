@@ -1,6 +1,6 @@
 # Development Guide
 
-Everything you need to run BiteSync locally from scratch.
+Everything you need to run CraveSync locally from scratch.
 
 ---
 
@@ -102,7 +102,7 @@ Run these SQL files in the Supabase SQL Editor in order:
 ```
 mobile/
 ├── App.tsx              ← All screens, navigation, and business logic
-├── BiteSyncLogo.tsx     ← Reusable logo SVG component
+├── CraveSyncLogo.tsx     ← Reusable logo SVG component
 ├── lib/
 │   └── supabase.ts      ← Supabase client initialisation
 ├── assets/              ← Icons, splash, logo
@@ -142,7 +142,7 @@ dashboard/
 
 | Type | Convention | Example |
 |------|-----------|---------|
-| Components | PascalCase | `BiteSyncLogo` |
+| Components | PascalCase | `CraveSyncLogo` |
 | State variables | camelCase | `selectedRestaurant` |
 | Handlers | `handle*` or verb phrase | `handleRestaurantSelect`, `submitReview` |
 | Styles | camelCase | `styles.menuCard` |
@@ -166,9 +166,9 @@ database/migrations/20250524_add_column_x.sql
 Then run it in the Supabase SQL Editor.
 
 ### Reset local search history
-Search history is stored in `AsyncStorage` under the key `bitesync_search_history`. Clear it with:
+Search history is stored in `AsyncStorage` under the key `cravesync_search_history`. Clear it with:
 ```js
-await AsyncStorage.removeItem('bitesync_search_history');
+await AsyncStorage.removeItem('cravesync_search_history');
 ```
 
 ---

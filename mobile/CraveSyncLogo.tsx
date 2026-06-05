@@ -5,7 +5,7 @@ import { View, Text } from 'react-native';
 const ACCENT = '#10b981';
 const INK = '#0b1220';
 
-export function BiteSyncMark({
+export function CraveSyncMark({
   size = 32,
   tileColor = INK,
   accent = ACCENT,
@@ -39,7 +39,7 @@ export function BiteSyncMark({
   );
 }
 
-export function BiteSyncLogo({
+export function CraveSyncLogo({
   size = 24,
   accent = ACCENT,
   textColor = '#ffffff',
@@ -52,7 +52,7 @@ export function BiteSyncLogo({
 }) {
   return (
     <View style={{ flexDirection: 'row', alignItems: 'center', gap: 10 }}>
-      <BiteSyncMark size={Math.round(size * 1.4)} tileColor={tileColor} accent={accent} />
+      <CraveSyncMark size={Math.round(size * 1.4)} tileColor={tileColor} accent={accent} />
       <Text style={{ fontWeight: '700', fontSize: size, letterSpacing: -0.5, color: textColor }}>
         Bite<Text style={{ color: accent }}>Sync</Text>
       </Text>
@@ -60,4 +60,4 @@ export function BiteSyncLogo({
   );
 }
 
-export default BiteSyncLogo;
+export default CraveSyncLogo;

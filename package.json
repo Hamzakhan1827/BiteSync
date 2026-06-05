@@ -1,5 +1,5 @@
 {
-  "name": "bitesync-monorepo",
+  "name": "cravesync-monorepo",
   "version": "1.0.0",
   "private": true,
   "workspaces": [

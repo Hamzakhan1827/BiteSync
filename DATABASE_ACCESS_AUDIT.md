@@ -1,4 +1,4 @@
-# BiteSync Data Access Audit
+# CraveSync Data Access Audit
 
 ## Query Validation Report
 Last updated: May 10, 2026

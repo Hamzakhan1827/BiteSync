@@ -225,15 +225,15 @@ a { color: #00A86B; text-decoration: none; }
 `;
 
 const docs = [
-  { file: 'FOR_RESTAURANTS.md', title: 'BiteSync for Restaurants' },
-  { file: 'FOR_DINERS.md',      title: 'BiteSync for Diners' },
-  { file: 'FAQ.md',             title: 'BiteSync FAQ' },
-  { file: 'PRIVACY_POLICY.md',  title: 'BiteSync Privacy Policy' },
-  { file: 'ARCHITECTURE.md',    title: 'BiteSync Architecture' },
-  { file: 'DATABASE.md',        title: 'BiteSync Database Reference' },
-  { file: 'DEVELOPMENT.md',     title: 'BiteSync Development Guide' },
-  { file: 'DEPLOYMENT.md',      title: 'BiteSync Deployment Guide' },
-  { file: 'SECURITY.md',        title: 'BiteSync Security Model' },
+  { file: 'FOR_RESTAURANTS.md', title: 'CraveSync for Restaurants' },
+  { file: 'FOR_DINERS.md',      title: 'CraveSync for Diners' },
+  { file: 'FAQ.md',             title: 'CraveSync FAQ' },
+  { file: 'PRIVACY_POLICY.md',  title: 'CraveSync Privacy Policy' },
+  { file: 'ARCHITECTURE.md',    title: 'CraveSync Architecture' },
+  { file: 'DATABASE.md',        title: 'CraveSync Database Reference' },
+  { file: 'DEVELOPMENT.md',     title: 'CraveSync Development Guide' },
+  { file: 'DEPLOYMENT.md',      title: 'CraveSync Deployment Guide' },
+  { file: 'SECURITY.md',        title: 'CraveSync Security Model' },
 ];
 
 const docsDir = path.join(__dirname, 'docs');
@@ -260,12 +260,12 @@ docs.forEach(({ file, title }) => {
 </head>
 <body>
   <div class="doc-header">
-    <div class="brand">⬡ BiteSync</div>
+    <div class="brand">⬡ CraveSync</div>
     <div class="doc-date">${now}</div>
   </div>
   ${body}
   <div class="doc-footer">
-    <span>BiteSync — Confidential</span>
+    <span>CraveSync — Confidential</span>
     <span>${title}</span>
   </div>
 </body>

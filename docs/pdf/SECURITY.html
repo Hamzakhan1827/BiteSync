@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BiteSync Security Model</title>
+  <title>CraveSync Security Model</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
 
@@ -176,14 +176,14 @@ a { color: #00A86B; text-decoration: none; }
 </head>
 <body>
   <div class="doc-header">
-    <div class="brand">⬡ BiteSync</div>
+    <div class="brand">⬡ CraveSync</div>
     <div class="doc-date">25 May 2026</div>
   </div>
   <h1>Security Model</h1>
-<p>BiteSync handles personal food diaries and private user notes. This document explains how data is protected at every layer.</p>
+<p>CraveSync handles personal food diaries and private user notes. This document explains how data is protected at every layer.</p>
 <hr>
 <h2>Authentication</h2>
-<p>BiteSync uses <strong>Supabase Auth</strong> with email + password.</p>
+<p>CraveSync uses <strong>Supabase Auth</strong> with email + password.</p>
 <ul><li>On signup, a trigger (<code>database/auth_trigger.sql</code>) automatically creates a matching row in the public <code>users</code> table, linking <code>auth.uid()</code> to the user's profile.</li>
 <li>All client requests are made with the <strong>anon key</strong> — a safe, public key. It only grants access to what RLS policies explicitly allow.</li>
 <li>The <strong>service role key</strong> (bypasses RLS) is only used server-side in the dashboard's Next.js API routes and is never shipped to the mobile client.</li>
@@ -235,8 +235,8 @@ Roles are stored in <code>users.role</code> column and checked in RLS policies.
 <li>[ ] Audit <code>super_admin_rls.sql</code> before adding any new admin accounts</li>
 </ul>
   <div class="doc-footer">
-    <span>BiteSync — Confidential</span>
-    <span>BiteSync Security Model</span>
+    <span>CraveSync — Confidential</span>
+    <span>CraveSync Security Model</span>
   </div>
 </body>
 </html>

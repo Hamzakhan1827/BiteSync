@@ -2,15 +2,15 @@
 
 **Last updated: May 2026**
 
-BiteSync is built on the principle that your personal food memories are yours alone. This policy explains what data we collect, why we collect it, and how it is protected.
+CraveSync is built on the principle that your personal food memories are yours alone. This policy explains what data we collect, why we collect it, and how it is protected.
 
 ---
 
 ## Who We Are
 
-BiteSync is a food intelligence platform that helps diners track their meals and helps restaurants understand customer feedback. We are based in Karachi, Pakistan.
+CraveSync is a food intelligence platform that helps diners track their meals and helps restaurants understand customer feedback. We are based in Karachi, Pakistan.
 
-For any privacy-related questions, contact us at: **support@bitesync.app**
+For any privacy-related questions, contact us at: **support@cravesync.app**
 
 ---
 
@@ -49,7 +49,7 @@ Private notes you write in the app are your personal food diary. They are:
 
 - **Never shared with restaurants** under any circumstances
 - **Never included in analytics** or aggregate reports
-- **Never read by BiteSync staff** in normal operations
+- **Never read by CraveSync staff** in normal operations
 - Stored in our database with access controlled at the database level — only your account can retrieve your private notes
 
 This is enforced at the database security level, not just the application level. Even if the app itself were compromised, private notes remain inaccessible to other parties.
@@ -60,7 +60,7 @@ This is enforced at the database security level, not just the application level.
 
 When you choose to write a public note or add a photo to a review, you are making that content visible to:
 
-- Other BiteSync users browsing that dish
+- Other CraveSync users browsing that dish
 - The restaurant that prepared the dish (via their dashboard)
 
 Your display name will appear alongside your public reviews. You can delete any public review at any time from your Profile tab.
@@ -115,14 +115,14 @@ You have the right to:
 
 - **Access** your data — all your reviews and diary entries are visible in the Profile tab
 - **Delete** any individual review at any time from the Profile tab
-- **Delete your account** — contact support@bitesync.app and we will process this within 7 business days
+- **Delete your account** — contact support@cravesync.app and we will process this within 7 business days
 - **Correct** your display name — update it in your Profile settings
 
 ---
 
 ## Children
 
-BiteSync is not intended for children under 13. We do not knowingly collect data from anyone under 13. If you believe a child has created an account, please contact us and we will remove it promptly.
+CraveSync is not intended for children under 13. We do not knowingly collect data from anyone under 13. If you believe a child has created an account, please contact us and we will remove it promptly.
 
 ---
 
@@ -136,4 +136,4 @@ If we make significant changes to this policy, we will notify users via the app 
 
 For any privacy questions or data requests:
 
-📧 **support@bitesync.app**
+📧 **support@cravesync.app**

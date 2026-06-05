@@ -3,7 +3,7 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>BiteSync Architecture</title>
+  <title>CraveSync Architecture</title>
   <style>
 @import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=Fira+Code:wght@400;500&display=swap');
 
@@ -176,11 +176,11 @@ a { color: #00A86B; text-decoration: none; }
 </head>
 <body>
   <div class="doc-header">
-    <div class="brand">⬡ BiteSync</div>
+    <div class="brand">⬡ CraveSync</div>
     <div class="doc-date">25 May 2026</div>
   </div>
   <h1>Architecture</h1>
-<p>This document covers how BiteSync is structured, how data flows through the system, and the decisions behind the design.</p>
+<p>This document covers how CraveSync is structured, how data flows through the system, and the decisions behind the design.</p>
 <hr>
 <h2>System Overview</h2>
 <pre><code>┌──────────────────────────────────────────────────────────┐
@@ -238,7 +238,7 @@ a { color: #00A86B; text-decoration: none; }
 <tr><td>Home Search</td><td><code>homeSearchText</code>, <code>homeDropdownRestaurants</code>, <code>homeDropdownDishes</code>, <code>searchHistory</code></td></tr></tbody></table>
 <hr>
 <h3>2. Restaurant Dashboard (<code>/dashboard</code>)</h3>
-<p>A Next.js 14 App Router application used by restaurant operators and the BiteSync admin team.</p>
+<p>A Next.js 14 App Router application used by restaurant operators and the CraveSync admin team.</p>
 <strong>Key pages:</strong>
 <ul><li><code>/</code> — Login</li>
 <li><code>/dashboard</code> — Overview (restaurants listed)</li>
@@ -291,8 +291,8 @@ useEffect [homeSearchText] — debounced 300ms
 <tr><td>Reviews dual-purpose</td><td>One <code>reviews</code> row serves as both the user's private diary entry and the restaurant's public feedback. <code>private_note</code> is user-only; <code>public_note</code> is shared.</td></tr>
 <tr><td>RLS over application-layer checks</td><td>Security is enforced at the database level, not just the frontend. Even a malicious client cannot read or modify another user's private notes.</td></tr></tbody></table>
   <div class="doc-footer">
-    <span>BiteSync — Confidential</span>
-    <span>BiteSync Architecture</span>
+    <span>CraveSync — Confidential</span>
+    <span>CraveSync Architecture</span>
   </div>
 </body>
 </html>

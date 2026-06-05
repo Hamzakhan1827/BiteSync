@@ -12,7 +12,7 @@ BEGIN
   VALUES (
     new.id, 
     new.email, 
-    COALESCE(new.raw_user_meta_data->>'full_name', 'BiteSync Diner'),
+    COALESCE(new.raw_user_meta_data->>'full_name', 'CraveSync Diner'),
     new.phone
   )
   ON CONFLICT (id) DO NOTHING;

@@ -229,7 +229,7 @@ export function FollowupPolicyEditor({ restaurant }: { restaurant: FollowupSetti
             <ul className="text-xs text-slate-600 dark:text-slate-300 space-y-1.5 leading-relaxed">
               <li>• Only customers who wrote a public note receive a follow-up</li>
               <li>• One email per review, 24-hour cooldown per customer</li>
-              <li>• Sent under your restaurant name via BiteSync</li>
+              <li>• Sent under your restaurant name via CraveSync</li>
               <li>• All sends are logged in your dashboard</li>
             </ul>
           </div>

@@ -1,8 +1,8 @@
 #!/bin/bash
-# BiteSync Security Audit Verification Script
+# CraveSync Security Audit Verification Script
 # Run this to verify all changes are in place and no syntax errors
 
-echo "🔍 BiteSync Security Verification Check"
+echo "🔍 CraveSync Security Verification Check"
 echo "========================================"
 echo ""
 

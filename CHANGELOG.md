@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to BiteSync are documented here.
+All notable changes to CraveSync are documented here.
 Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 
 ---
@@ -19,7 +19,7 @@ Format follows [Keep a Changelog](https://keepachangelog.com/en/1.0.0/).
 - Review submission: thumbs up/down, private note, public note, optional photo upload
 - Photo viewer: tap review photo to see full screen
 - Review streak counter (consecutive days reviewed)
-- Sidebar drawer: profile info, navigation, sign out, BiteSync branding footer
+- Sidebar drawer: profile info, navigation, sign out, CraveSync branding footer
 - Bottom tab bar: Home, Review, Profile (slim, premium design)
 - Restaurant dashboard: menu management (add restaurant, category, item), view public reviews
 - Database: full schema, RLS policies on all tables, 5-minute edit window trigger

@@ -26,17 +26,17 @@ async function fixRoles() {
     // Find Kolachi restaurant
     const kolachi = restaurants.find(r => r.name.toLowerCase().includes('kolachi'));
     if (kolachi) {
-      console.log(`Linking kolachi@bitesync.com to ${kolachi.name} (${kolachi.id})`);
+      console.log(`Linking kolachi@cravesync.com to ${kolachi.name} (${kolachi.id})`);
       
       const { error: updateError } = await supabaseAdmin
         .from('users')
         .update({ managed_restaurant_id: kolachi.id })
-        .eq('email', 'kolachi@bitesync.com');
+        .eq('email', 'kolachi@cravesync.com');
 
       if (updateError) {
         console.error(`Error updating Kolachi user: ${updateError.message}`);
       } else {
-        console.log('✓ Successfully linked kolachi@bitesync.com');
+        console.log('✓ Successfully linked kolachi@cravesync.com');
       }
     } else {
       console.warn('⚠ Kolachi restaurant not found');
@@ -45,17 +45,17 @@ async function fixRoles() {
     // Find Xanders restaurant
     const xanders = restaurants.find(r => r.name.toLowerCase().includes('xander'));
     if (xanders) {
-      console.log(`Linking xanders@bitesync.com to ${xanders.name} (${xanders.id})`);
+      console.log(`Linking xanders@cravesync.com to ${xanders.name} (${xanders.id})`);
       
       const { error: updateError } = await supabaseAdmin
         .from('users')
         .update({ managed_restaurant_id: xanders.id })
-        .eq('email', 'xanders@bitesync.com');
+        .eq('email', 'xanders@cravesync.com');
 
       if (updateError) {
         console.error(`Error updating Xanders user: ${updateError.message}`);
       } else {
-        console.log('✓ Successfully linked xanders@bitesync.com');
+        console.log('✓ Successfully linked xanders@cravesync.com');
       }
     } else {
       console.warn('⚠ Xanders restaurant not found');

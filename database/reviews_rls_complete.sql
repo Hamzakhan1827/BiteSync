@@ -1,4 +1,4 @@
--- BiteSync Complete Review RLS Policies
+-- CraveSync Complete Review RLS Policies
 -- This file provides comprehensive coverage for reviews table security
 -- Run in Supabase SQL Editor
 

@@ -1,8 +1,8 @@
-# BiteSync
+# CraveSync
 
 > **Your personal food memory, every bite.**
 
-BiteSync is a mobile-first food intelligence platform built for Karachi's dining scene. It lets users build a private food diary, leave public restaurant reviews, and discover what's trending — while giving restaurant operators a live dashboard to monitor menu performance and customer sentiment.
+CraveSync is a mobile-first food intelligence platform built for Karachi's dining scene. It lets users build a private food diary, leave public restaurant reviews, and discover what's trending — while giving restaurant operators a live dashboard to monitor menu performance and customer sentiment.
 
 ---
 
@@ -44,7 +44,7 @@ BiteSync is a mobile-first food intelligence platform built for Karachi's dining
 | Icons | lucide-react-native |
 | Local storage | AsyncStorage (search history, preferences) |
 | Image handling | expo-image-picker + expo-image-manipulator |
-| Bundle ID | `com.bitesync.app` |
+| Bundle ID | `com.cravesync.app` |
 
 ---
 
@@ -85,7 +85,7 @@ See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full environment setup.
 | Document | Audience |
 |----------|---------|
 | [`docs/FOR_RESTAURANTS.md`](docs/FOR_RESTAURANTS.md) | Restaurant owners — dashboard guide, onboarding, what you get |
-| [`docs/FOR_DINERS.md`](docs/FOR_DINERS.md) | App users — how to use BiteSync, features, tips |
+| [`docs/FOR_DINERS.md`](docs/FOR_DINERS.md) | App users — how to use CraveSync, features, tips |
 | [`docs/FAQ.md`](docs/FAQ.md) | Common questions answered for both diners and restaurants |
 | [`docs/PRIVACY_POLICY.md`](docs/PRIVACY_POLICY.md) | Data collection, private notes protection, your rights |
 
@@ -115,4 +115,4 @@ See [`docs/DEVELOPMENT.md`](docs/DEVELOPMENT.md) for full environment setup.
 
 ## License
 
-Private and proprietary. All rights reserved — BiteSync © 2026.
+Private and proprietary. All rights reserved — CraveSync © 2026.

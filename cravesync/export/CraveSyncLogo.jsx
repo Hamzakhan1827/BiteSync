@@ -1,17 +1,17 @@
-// BiteSyncLogo.jsx — drop-in React component for the BiteSync mark + wordmark.
+// CraveSyncLogo.jsx — drop-in React component for the CraveSync mark + wordmark.
 // No deps. Tailwind-friendly. SSR-safe. Backgrounds are transparent.
 //
 // Mark: "Sculpted B" — rounded tile, geometric B, fork on the upper-left edge,
 // a spoon-curl tucked into the upper bowl. The B is the hero.
 //
 // Usage:
-//   import { BiteSyncLogo, BiteSyncMark, BiteSyncWordmark } from './BiteSyncLogo';
-//   <BiteSyncLogo />                            // mark + "BiteSync" text
-//   <BiteSyncMark size={32} />                  // icon only (favicon, app icon)
-//   <BiteSyncWordmark className="h-6 w-auto" /> // pure-SVG horizontal wordmark
+//   import { CraveSyncLogo, CraveSyncMark, CraveSyncWordmark } from './CraveSyncLogo';
+//   <CraveSyncLogo />                            // mark + "CraveSync" text
+//   <CraveSyncMark size={32} />                  // icon only (favicon, app icon)
+//   <CraveSyncWordmark className="h-6 w-auto" /> // pure-SVG horizontal wordmark
 //
 // Theme:
-//   <BiteSyncLogo accent="#10b981" textColor="#ffffff" tileColor="#0b1220" />
+//   <CraveSyncLogo accent="#10b981" textColor="#ffffff" tileColor="#0b1220" />
 //   On a light surface:  textColor="#0b1220"  (tile stays dark)
 
 import React from 'react';
@@ -28,7 +28,7 @@ const INK = '#0b1220';
  * @param {string} [props.accent='#10b981']    B + fork + spoon color
  * @param {string} [props.className]
  */
-export function BiteSyncMark({
+export function CraveSyncMark({
   size = 32,
   tileColor = INK,
   accent = ACCENT,
@@ -42,7 +42,7 @@ export function BiteSyncMark({
       viewBox="0 0 96 96"
       fill="none"
       role="img"
-      aria-label="BiteSync"
+      aria-label="CraveSync"
       className={className}
       {...rest}
     >
@@ -73,9 +73,9 @@ export function BiteSyncMark({
 }
 
 /**
- * Horizontal lockup: mark + "BiteSync" text. Use in headers, footers, decks.
+ * Horizontal lockup: mark + "CraveSync" text. Use in headers, footers, decks.
  */
-export function BiteSyncLogo({
+export function CraveSyncLogo({
   size = 28,
   accent = ACCENT,
   textColor = '#ffffff',
@@ -95,7 +95,7 @@ export function BiteSyncLogo({
       }}
       {...rest}
     >
-      <BiteSyncMark size={size * 1.4} tileColor={tileColor} accent={accent} />
+      <CraveSyncMark size={size * 1.4} tileColor={tileColor} accent={accent} />
       <span
         style={{
           fontFamily:
@@ -116,7 +116,7 @@ export function BiteSyncLogo({
  * Pure-SVG wordmark — sculpted B leads, then "iteSync" set in Inter.
  * No tile behind the B, so it sits inline cleanly with text.
  */
-export function BiteSyncWordmark({
+export function CraveSyncWordmark({
   height = 32,
   accent = ACCENT,
   textColor = '#ffffff',
@@ -129,7 +129,7 @@ export function BiteSyncWordmark({
       height={height}
       fill="none"
       role="img"
-      aria-label="BiteSync"
+      aria-label="CraveSync"
       className={className}
       {...rest}
     >
@@ -180,4 +180,4 @@ export function BiteSyncWordmark({
   );
 }
 
-export default BiteSyncLogo;
+export default CraveSyncLogo;

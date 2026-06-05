@@ -1,4 +1,4 @@
--- BiteSync Initial Seed Data
+-- CraveSync Initial Seed Data
 -- 5 Top Karachi Restaurants with their signature items
 
 -- 1. Insert Restaurants

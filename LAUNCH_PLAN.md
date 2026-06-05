@@ -1,4 +1,4 @@
-# BiteSync — Launch Plan
+# CraveSync — Launch Plan
 ## Development Complete → First Paying Client in 90 Days
 
 ---
@@ -9,9 +9,9 @@ Before anything else — here's your cross-platform reality:
 
 | Platform | Status | Notes |
 |----------|--------|-------|
-| **Android** | ✅ Ready | APK built, `com.bitesync.app`, EAS configured |
+| **Android** | ✅ Ready | APK built, `com.cravesync.app`, EAS configured |
 | **Web** | ✅ Ready | Runs via `expo start --web`, works in browser |
-| **iOS** | ⚠️ Configured but untested | Bundle ID set (`com.bitesync.app`), `supportsTablet: true` — but iOS build requires Mac + Xcode OR EAS cloud build. You cannot test iOS on Windows locally. |
+| **iOS** | ⚠️ Configured but untested | Bundle ID set (`com.cravesync.app`), `supportsTablet: true` — but iOS build requires Mac + Xcode OR EAS cloud build. You cannot test iOS on Windows locally. |
 
 **Recommendation for now:** Focus on Android (your primary market in Pakistan). Web works as a demo tool. iOS can wait until you have revenue to justify an Apple Developer account ($99/year) and testing device.
 
@@ -139,7 +139,7 @@ Screenshot: [attach]
 | Google Maps | Reviews | No per-dish tracking, not actionable for restaurants |
 | Instagram | Food photos | No structured feedback, no data for restaurants |
 | Yelp | Reviews | Not active in Pakistan |
-| **BiteSync** | Private diary + structured dish feedback | This is your gap |
+| **CraveSync** | Private diary + structured dish feedback | This is your gap |
 
 **Your positioning:** You're not competing with Zomato for restaurant discovery. You're the **feedback and food intelligence layer** that Zomato doesn't provide.
 
@@ -211,9 +211,9 @@ Create a form with these questions:
 ### End of Month 1 Deliverables
 - [ ] Survey results compiled (minimum 50 diner responses, 10 restaurant responses)
 - [ ] Competitor analysis documented
-- [ ] Clear answer to: What is the #1 pain point for restaurants that BiteSync solves?
-- [ ] Clear answer to: What makes a diner actually use BiteSync consistently?
-- [ ] Updated value proposition (1 sentence: "BiteSync does X for Y so that Z")
+- [ ] Clear answer to: What is the #1 pain point for restaurants that CraveSync solves?
+- [ ] Clear answer to: What makes a diner actually use CraveSync consistently?
+- [ ] Updated value proposition (1 sentence: "CraveSync does X for Y so that Z")
 
 ---
 
@@ -225,7 +225,7 @@ Create a form with these questions:
 
 **1. One-Pager (PDF)**
 One page. No jargon. Answers:
-- What is BiteSync?
+- What is CraveSync?
 - What problem does it solve?
 - What does the restaurant get?
 - How much does it cost? (Free for beta)
@@ -242,7 +242,7 @@ Use: **Loom** (free) or OBS for recording. Share as a link.
 **3. Pitch Deck (8–10 slides)**
 ```
 Slide 1: Problem — "Restaurants don't know why customers don't come back"
-Slide 2: Solution — BiteSync in one sentence
+Slide 2: Solution — CraveSync in one sentence
 Slide 3: How it works — 3 steps (diner reviews → data flows → restaurant sees)
 Slide 4: What the restaurant gets (dashboard screenshots)
 Slide 5: What the diner gets (app screenshots)
@@ -299,7 +299,7 @@ Once you have one yes:
 **In-restaurant:**
 - QR code standee on every table ("Scan to review your meal & build your food diary")
 - QR on the receipt
-- Train waitstaff to mention it ("You can save your order and leave feedback on BiteSync")
+- Train waitstaff to mention it ("You can save your order and leave feedback on CraveSync")
 
 **Digital:**
 - Instagram/TikTok: Short video showing the food diary feature — "I finally remember what I ordered 3 months ago at X restaurant"
@@ -307,7 +307,7 @@ Once you have one yes:
 - Post in Karachi food Facebook groups
 - Ask your first restaurant to share it with their followers
 
-**Incentive (optional):** First 100 users who leave 5 reviews get a small reward (discount at the restaurant, a BiteSync badge, etc.)
+**Incentive (optional):** First 100 users who leave 5 reviews get a small reward (discount at the restaurant, a CraveSync badge, etc.)
 
 ### What Success Looks Like at End of Month 3
 

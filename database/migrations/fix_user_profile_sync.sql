@@ -1,5 +1,5 @@
 -- ============================================================
--- BiteSync: Permanent User Profile Sync Fix
+-- CraveSync: Permanent User Profile Sync Fix
 -- Run in Supabase SQL Editor in one shot. Safe to re-run.
 --
 -- Edge cases covered:

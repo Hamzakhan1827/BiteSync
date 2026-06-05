@@ -16,7 +16,7 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "BiteSync - Restaurant Dashboard",
+  title: "CraveSync - Restaurant Dashboard",
   description: "Live data and feedback for your restaurant.",
   icons: { icon: '/favicon.svg', shortcut: '/favicon.svg' },
 };

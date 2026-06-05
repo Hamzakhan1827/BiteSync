@@ -6,7 +6,7 @@ import {
 import { StatusBar as ExpoStatusBar } from 'expo-status-bar';
 import { supabase } from './lib/supabase';
 import { ChevronRight, X, ThumbsUp, ThumbsDown, Send, ArrowLeft, Clock, Search, Eye, EyeOff, Home, PlusCircle, User, Menu, Heart, Camera, LogOut, Info, MessageCircle, PenTool, Trash2 } from 'lucide-react-native';
-import { BiteSyncLogo, BiteSyncMark } from './BiteSyncLogo';
+import { CraveSyncLogo, CraveSyncMark } from './CraveSyncLogo';
 import { Session } from '@supabase/supabase-js';
 import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as ImagePicker from 'expo-image-picker';
@@ -84,7 +84,7 @@ const calcStreak = (entries: any[]): number => {
 };
 
 const ONBOARDING_SLIDES = [
-  { emoji: '🍽️', title: 'Welcome to BiteSync', desc: 'Your personal food memory — track every bite, every craving, every wow moment.' },
+  { emoji: '🍽️', title: 'Welcome to CraveSync', desc: 'Your personal food memory — track every bite, every craving, every wow moment.' },
   { emoji: '⭐', title: 'Discover & Review', desc: 'Find restaurants, try dishes, and share your honest opinion with a simple thumbs up or down.' },
   { emoji: '📔', title: 'Build Your Diary', desc: 'Every review is private first. Only you see your food notes — the restaurant only sees public feedback.' },
 ];
@@ -180,7 +180,7 @@ export default function App() {
   const AVATAR_EMOJIS = ['🧑‍🍳', '🦊', '🐼', '🐨', '🐸', '🦁', '🐻', '🐙'];
 
   // Rate limiter for authentication attempts (5 minutes = 300000ms)
-  const authRateLimiter = useRef(new RateLimiter('bitesync_auth_attempts', 5, 300000)).current;
+  const authRateLimiter = useRef(new RateLimiter('cravesync_auth_attempts', 5, 300000)).current;
 
   const getAvatarIndex = (name: string) => {
     // Deterministic hash based on name
@@ -234,7 +234,7 @@ export default function App() {
   // Search history helpers
   const loadSearchHistory = async () => {
     try {
-      const raw = await AsyncStorage.getItem('bitesync_search_history');
+      const raw = await AsyncStorage.getItem('cravesync_search_history');
       if (raw) setSearchHistory(JSON.parse(raw));
     } catch {}
   };
@@ -246,7 +246,7 @@ export default function App() {
       const existing = searchHistory.filter(s => s.toLowerCase() !== trimmed.toLowerCase());
       const updated = [trimmed, ...existing].slice(0, 3);
       setSearchHistory(updated);
-      await AsyncStorage.setItem('bitesync_search_history', JSON.stringify(updated));
+      await AsyncStorage.setItem('cravesync_search_history', JSON.stringify(updated));
     } catch {}
   };
 
@@ -318,7 +318,7 @@ export default function App() {
   };
 
   useEffect(() => {
-    AsyncStorage.getItem('bitesync_onboarding_v1').then(val => setOnboardingDone(val === 'done'));
+    AsyncStorage.getItem('cravesync_onboarding_v1').then(val => setOnboardingDone(val === 'done'));
 
     supabase.auth.getSession().then(({ data: { session }, error }) => {
       if (error) {
@@ -690,7 +690,7 @@ export default function App() {
     setAuthLoading(true);
     setAuthError('');
     try {
-      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'bitesync://reset-password' });
+      const { error } = await supabase.auth.resetPasswordForEmail(email.trim(), { redirectTo: 'cravesync://reset-password' });
       if (error) throw error;
       setResetEmailSent(true);
     } catch (err: any) {
@@ -1019,7 +1019,7 @@ export default function App() {
     return (
       <View style={{ flex: 1, backgroundColor: '#0b1220', justifyContent: 'center', alignItems: 'center' }}>
         <ExpoStatusBar style="light" backgroundColor="#0b1220" translucent={false} />
-        <BiteSyncMark size={110} tileColor="#0b1220" accent="#00A86B" />
+        <CraveSyncMark size={110} tileColor="#0b1220" accent="#00A86B" />
         <Text style={{ color: '#ffffff', fontSize: 34, fontWeight: '800', marginTop: 24, letterSpacing: -0.5 }}>
           Bite<Text style={{ color: '#00A86B' }}>Sync</Text>
         </Text>
@@ -1035,7 +1035,7 @@ export default function App() {
     const slide = ONBOARDING_SLIDES[onboardingSlide];
     const isLast = onboardingSlide === ONBOARDING_SLIDES.length - 1;
     const finishOnboarding = async () => {
-      await AsyncStorage.setItem('bitesync_onboarding_v1', 'done');
+      await AsyncStorage.setItem('cravesync_onboarding_v1', 'done');
       setOnboardingDone(true);
     };
     return (
@@ -1088,7 +1088,7 @@ export default function App() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 28 }} keyboardShouldPersistTaps="handled">
             <View style={{ alignSelf: 'center', marginBottom: 24 }}>
-              <BiteSyncLogo size={32} textColor="#0b1220" />
+              <CraveSyncLogo size={32} textColor="#0b1220" />
             </View>
             <Text style={{ fontSize: 24, fontWeight: '800', color: '#111', marginBottom: 6 }}>Set New Password</Text>
             <Text style={{ fontSize: 14, color: '#666', marginBottom: 28 }}>Choose a strong password for your account.</Text>
@@ -1133,7 +1133,7 @@ export default function App() {
         <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={{ flex: 1 }}>
           <ScrollView contentContainerStyle={{ flexGrow: 1, justifyContent: 'center', padding: 28 }} keyboardShouldPersistTaps="handled" showsVerticalScrollIndicator={false}>
             <View style={{ alignSelf: 'center', marginBottom: 16 }}>
-              <BiteSyncLogo size={32} textColor="#0b1220" />
+              <CraveSyncLogo size={32} textColor="#0b1220" />
             </View>
             <Text style={styles.authSubtitle}>Your personal food memory, every bite.</Text>
             {authError ? <Text style={{ color: '#ef4444', marginBottom: 8, fontSize: 13, fontWeight: '600', marginLeft: 4 }}>{authError}</Text> : null}
@@ -1215,7 +1215,7 @@ export default function App() {
             </View>
             <View style={{ flex: 1, alignItems: 'center' }}>
               <TouchableOpacity onPress={() => { setCurrentTab('home'); setSelectedRestaurant(null); setDetailItem(null); setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }}>
-                <BiteSyncLogo size={18} textColor="#111" />
+                <CraveSyncLogo size={18} textColor="#111" />
               </TouchableOpacity>
             </View>
             <View style={{ flex: 1, alignItems: 'flex-end' }}>
@@ -2288,7 +2288,7 @@ export default function App() {
                 <MessageCircle color="#888" size={24} />
                 <View>
                   <Text style={{ fontSize: 16, fontWeight: '700', color: '#444' }}>Contact Support</Text>
-                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>support@bitesync.app</Text>
+                  <Text style={{ fontSize: 12, color: '#888', marginTop: 2 }}>support@cravesync.app</Text>
                 </View>
               </TouchableOpacity>
             </View>
@@ -2304,7 +2304,7 @@ export default function App() {
 
               {/* Standalone branding — full visibility */}
               <View style={{ alignItems: 'center', borderTopWidth: 1, borderTopColor: '#F0F0F0', paddingTop: 14 }}>
-                <BiteSyncLogo size={18} textColor="#00A86B" />
+                <CraveSyncLogo size={18} textColor="#00A86B" />
               </View>
             </View>
           </Animated.View>

@@ -1,8 +1,8 @@
-# BiteSync — AI Integration Plan
+# CraveSync — AI Integration Plan
 
 ## Overview
 
-BiteSync has a solid data foundation (reviews, customer profiles, menu items) that makes AI integration natural and high-value. The goal is to use customer data flowing through the app to drive personalized follow-ups, retention campaigns, and revenue intelligence for restaurant owners.
+CraveSync has a solid data foundation (reviews, customer profiles, menu items) that makes AI integration natural and high-value. The goal is to use customer data flowing through the app to drive personalized follow-ups, retention campaigns, and revenue intelligence for restaurant owners.
 
 **AI Provider:** OpenAI API  
 **Email Provider:** Resend  
@@ -86,5 +86,5 @@ New **"AI Insights"** section in the dashboard:
 
 1. **Phase 1** — Post-review AI follow-up email *(highest immediate impact, data already exists)*
 2. **Phase 3** — AI Insights digest panel *(convinces restaurant owners the platform is intelligent)*
-3. **Phase 2** — Monthly campaign builder *(drives revenue for restaurants = retention for BiteSync)*
+3. **Phase 2** — Monthly campaign builder *(drives revenue for restaurants = retention for CraveSync)*
 4. **Phase 4** — Loyalty automation *(long-term moat)*

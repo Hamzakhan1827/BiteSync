@@ -1,4 +1,4 @@
-# Security Policy for BiteSync
+# Security Policy for CraveSync
 
 ## Environment Variables
 
