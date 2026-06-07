@@ -4,7 +4,7 @@ import { FeedbackManager } from '@/components/FeedbackManager'
 import { createClient } from '@/utils/supabase/server'
 import { Suspense } from 'react'
 
-export const revalidate = 0; // Disable cache so we always see live data
+export const revalidate = 5; // Cache for 5s, server-refresh in background
 
 export default async function FeedbackPage() {
   const supabase = await createClient();

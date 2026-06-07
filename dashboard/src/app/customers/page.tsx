@@ -5,7 +5,7 @@ import { CustomerDirectory } from '@/components/CustomerDirectory'
 import { InsightsPanel } from '@/components/InsightsPanel'
 import { redirect } from 'next/navigation'
 
-export const revalidate = 0
+export const revalidate = 5
 
 export default async function CustomersPage() {
   const supabase = await createClient()

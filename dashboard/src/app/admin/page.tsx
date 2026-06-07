@@ -4,7 +4,7 @@ import { supabaseAdmin } from '@/lib/supabase-admin'
 import { redirect } from 'next/navigation'
 import { Building2, Users, Star, Mail, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
 
-export const revalidate = 0
+export const revalidate = 5
 
 function timeAgo(dateStr: string) {
   const seconds = Math.floor((Date.now() - new Date(dateStr).getTime()) / 1000)
