@@ -51,5 +51,31 @@ export async function updateSession(request: NextRequest) {
     return NextResponse.redirect(url)
   }
 
+  // Inject user info into headers so server components can access them without calling auth API again
+  if (user) {
+    const requestHeaders = new Headers(request.headers)
+    requestHeaders.set('x-user-id', user.id)
+    requestHeaders.set('x-user-email', user.email || '')
+    
+    const responseWithHeaders = NextResponse.next({
+      request: {
+        headers: requestHeaders,
+      },
+    })
+    
+    // Copy any cookies (e.g. session updates) from the original supabaseResponse
+    supabaseResponse.cookies.getAll().forEach((cookie) => {
+      responseWithHeaders.cookies.set(cookie.name, cookie.value, {
+        path: cookie.path,
+        domain: cookie.domain,
+        maxAge: cookie.maxAge,
+        secure: cookie.secure,
+        httpOnly: cookie.httpOnly,
+        sameSite: cookie.sameSite,
+      })
+    })
+    return responseWithHeaders
+  }
+
   return supabaseResponse
 }

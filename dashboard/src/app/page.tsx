@@ -1,7 +1,6 @@
 import { Header } from '@/components/Header'
 import { Star, TrendingUp, Users, ThumbsUp, ThumbsDown, Minus, ExternalLink } from 'lucide-react'
 import Link from 'next/link'
-import { createClient } from '@/utils/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { redirect } from 'next/navigation'
 
@@ -23,17 +22,58 @@ function getInitial(name: string | null, email: string | null) {
   return (name || email || "?").charAt(0).toUpperCase();
 }
 
+import { headers } from 'next/headers'
+import { unstable_cache } from 'next/cache'
+
+const getCachedUserProfile = unstable_cache(
+  async (userId: string) => {
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('managed_restaurant_id, is_super_admin')
+      .eq('id', userId)
+      .single()
+    if (error) throw error
+    return data
+  },
+  ['user-profile'],
+  { revalidate: 60, tags: ['profile'] }
+)
+
+const getCachedReviews = unstable_cache(
+  async (restaurantId: string) => {
+    const { data, error } = await supabaseAdmin
+      .from('reviews')
+      .select(`
+        id,
+        rating_thumbs,
+        public_note,
+        created_at,
+        user_id,
+        users ( full_name, email ),
+        menu_items!inner (
+          id,
+          name,
+          price,
+          menu_categories!inner ( name, restaurant_id )
+        )
+      `)
+      .eq('menu_items.menu_categories.restaurant_id', restaurantId)
+      .order('created_at', { ascending: false })
+    if (error) throw error
+    return data ?? []
+  },
+  ['restaurant-reviews'],
+  { revalidate: 5, tags: ['reviews'] }
+)
+
 export default async function DashboardPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const headerList = await headers()
+  const userId = headerList.get('x-user-id')
+  const userEmail = headerList.get('x-user-email')
 
-  if (!user) redirect('/login')
+  if (!userId) redirect('/login')
 
-  const { data: profile } = await supabaseAdmin
-    .from('users')
-    .select('managed_restaurant_id, is_super_admin')
-    .eq('id', user.id)
-    .single()
+  const profile = await getCachedUserProfile(userId)
 
   if (profile?.is_super_admin) redirect('/admin')
 
@@ -45,30 +85,7 @@ export default async function DashboardPage() {
     )
   }
 
-  // Fetch all reviews for this restaurant
-  let reviewQuery = supabaseAdmin
-    .from('reviews')
-    .select(`
-      id,
-      rating_thumbs,
-      public_note,
-      created_at,
-      user_id,
-      users ( full_name, email ),
-      menu_items!inner (
-        id,
-        name,
-        price,
-        menu_categories!inner ( name, restaurant_id )
-      )
-    `)
-    .order('created_at', { ascending: false })
-
-  reviewQuery = reviewQuery.eq('menu_items.menu_categories.restaurant_id', profile.managed_restaurant_id)
-
-  const { data: reviews } = await reviewQuery
-
-  const allReviews = reviews ?? []
+  const allReviews = await getCachedReviews(profile.managed_restaurant_id)
 
   // --- Top-level metrics ---
   const totalReviews = allReviews.length

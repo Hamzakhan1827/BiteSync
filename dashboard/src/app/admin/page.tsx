@@ -1,8 +1,9 @@
 import { Header } from '@/components/Header'
-import { createClient } from '@/utils/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { redirect } from 'next/navigation'
 import { Building2, Users, Star, Mail, AlertTriangle, CheckCircle, XCircle } from 'lucide-react'
+import { headers } from 'next/headers'
+import { unstable_cache } from 'next/cache'
 
 export const revalidate = 5
 
@@ -18,62 +19,103 @@ function timeAgo(dateStr: string) {
   return new Date(dateStr).toLocaleDateString([], { month: 'short', day: 'numeric' })
 }
 
-export default async function AdminPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
-  if (!user) redirect('/login')
+const getCachedAdminUserProfile = unstable_cache(
+  async (userId: string) => {
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('is_super_admin')
+      .eq('id', userId)
+      .single()
+    if (error) throw error
+    return data
+  },
+  ['admin-user-profile'],
+  { revalidate: 60, tags: ['profile'] }
+)
 
-  const { data: profile } = await supabaseAdmin
-    .from('users')
-    .select('is_super_admin')
-    .eq('id', user.id)
-    .single()
+const getCachedAdminStats = unstable_cache(
+  async () => {
+    const [
+      { data: restaurants, error: err1 },
+      { count: totalDiners, error: err2 },
+      { count: totalReviews, error: err3 },
+      { count: followupEmailsSent, error: err4 },
+      { count: failedEmails, error: err5 },
+      { count: winbackSent, error: err6 },
+      { data: allReviews, error: err7 },
+    ] = await Promise.all([
+      supabaseAdmin
+        .from('restaurants')
+        .select('id, name, followup_enabled, recovery_emails_enabled, winback_emails_enabled, created_at')
+        .order('created_at', { ascending: false }),
+
+      supabaseAdmin
+        .from('users')
+        .select('id', { count: 'exact', head: true })
+        .eq('is_super_admin', false)
+        .is('managed_restaurant_id', null),
+
+      supabaseAdmin
+        .from('reviews')
+        .select('id', { count: 'exact', head: true }),
+
+      supabaseAdmin
+        .from('ai_followup_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'sent'),
+
+      supabaseAdmin
+        .from('ai_followup_log')
+        .select('id', { count: 'exact', head: true })
+        .eq('status', 'failed'),
+
+      supabaseAdmin
+        .from('winback_log')
+        .select('id', { count: 'exact', head: true }),
+
+      supabaseAdmin
+        .from('reviews')
+        .select('created_at, menu_items!inner(menu_categories!inner(restaurant_id))')
+        .order('created_at', { ascending: false }),
+    ])
+
+    if (err1 || err2 || err3 || err4 || err5 || err6 || err7) {
+      throw new Error('Failed to fetch admin stats')
+    }
+
+    return {
+      restaurants: restaurants ?? [],
+      totalDiners: totalDiners ?? 0,
+      totalReviews: totalReviews ?? 0,
+      followupEmailsSent: followupEmailsSent ?? 0,
+      failedEmails: failedEmails ?? 0,
+      winbackSent: winbackSent ?? 0,
+      allReviews: allReviews ?? [],
+    }
+  },
+  ['admin-stats'],
+  { revalidate: 5, tags: ['admin'] }
+)
+
+export default async function AdminPage() {
+  const headerList = await headers()
+  const userId = headerList.get('x-user-id')
+  const userEmail = headerList.get('x-user-email')
+  if (!userId) redirect('/login')
+
+  const profile = await getCachedAdminUserProfile(userId)
 
   if (!profile?.is_super_admin) redirect('/')
 
-  const [
-    { data: restaurants },
-    { count: totalDiners },
-    { count: totalReviews },
-    { count: followupEmailsSent },
-    { count: failedEmails },
-    { count: winbackSent },
-    { data: allReviews },
-  ] = await Promise.all([
-    supabaseAdmin
-      .from('restaurants')
-      .select('id, name, followup_enabled, recovery_emails_enabled, winback_emails_enabled, created_at')
-      .order('created_at', { ascending: false }),
-
-    supabaseAdmin
-      .from('users')
-      .select('id', { count: 'exact', head: true })
-      .eq('is_super_admin', false)
-      .is('managed_restaurant_id', null),
-
-    supabaseAdmin
-      .from('reviews')
-      .select('id', { count: 'exact', head: true }),
-
-    supabaseAdmin
-      .from('ai_followup_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'sent'),
-
-    supabaseAdmin
-      .from('ai_followup_log')
-      .select('id', { count: 'exact', head: true })
-      .eq('status', 'failed'),
-
-    supabaseAdmin
-      .from('winback_log')
-      .select('id', { count: 'exact', head: true }),
-
-    supabaseAdmin
-      .from('reviews')
-      .select('created_at, menu_items!inner(menu_categories!inner(restaurant_id))')
-      .order('created_at', { ascending: false }),
-  ])
+  const {
+    restaurants,
+    totalDiners,
+    totalReviews,
+    followupEmailsSent,
+    failedEmails,
+    winbackSent,
+    allReviews,
+  } = await getCachedAdminStats()
 
   // Build per-restaurant review stats
   const restaurantStats: Record<string, { count: number; lastAt: string | null }> = {}

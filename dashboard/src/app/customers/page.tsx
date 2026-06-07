@@ -1,23 +1,80 @@
 import { Header } from '@/components/Header'
-import { createClient } from '@/utils/supabase/server'
 import { supabaseAdmin } from '@/lib/supabase-admin'
 import { CustomerDirectory } from '@/components/CustomerDirectory'
 import { InsightsPanel } from '@/components/InsightsPanel'
 import { redirect } from 'next/navigation'
+import { headers } from 'next/headers'
+import { unstable_cache } from 'next/cache'
 
 export const revalidate = 5
 
+const getCachedUserProfile = unstable_cache(
+  async (userId: string) => {
+    const { data, error } = await supabaseAdmin
+      .from('users')
+      .select('managed_restaurant_id, is_super_admin')
+      .eq('id', userId)
+      .single()
+    if (error) throw error
+    return data
+  },
+  ['user-profile'],
+  { revalidate: 60, tags: ['profile'] }
+)
+
+const getCachedRestaurantName = unstable_cache(
+  async (restaurantId: string) => {
+    const { data, error } = await supabaseAdmin
+      .from('restaurants')
+      .select('name')
+      .eq('id', restaurantId)
+      .single()
+    if (error) throw error
+    return data?.name || 'Unknown Restaurant'
+  },
+  ['restaurant-name'],
+  { revalidate: 300, tags: ['restaurant'] }
+)
+
+const getCachedCustomerReviews = unstable_cache(
+  async (restaurantId: string | null, isSuperAdmin: boolean) => {
+    let query = supabaseAdmin
+      .from('reviews')
+      .select(`
+        id,
+        rating_thumbs,
+        public_note,
+        photo_url,
+        created_at,
+        users ( id, full_name, email, phone_number ),
+        menu_items!inner (
+          id,
+          name,
+          menu_categories!inner ( restaurant_id )
+        )
+      `)
+      .order('created_at', { ascending: false })
+
+    if (!isSuperAdmin && restaurantId) {
+      query = query.eq('menu_items.menu_categories.restaurant_id', restaurantId)
+    }
+
+    const { data, error } = await query
+    if (error) throw error
+    return data ?? []
+  },
+  ['customer-reviews'],
+  { revalidate: 5, tags: ['reviews'] }
+)
+
 export default async function CustomersPage() {
-  const supabase = await createClient()
-  const { data: { user } } = await supabase.auth.getUser()
+  const headerList = await headers()
+  const userId = headerList.get('x-user-id')
+  const userEmail = headerList.get('x-user-email')
 
-  if (!user) redirect('/login')
+  if (!userId) redirect('/login')
 
-  const { data: profile } = await supabaseAdmin
-    .from('users')
-    .select('managed_restaurant_id, is_super_admin')
-    .eq('id', user.id)
-    .single()
+  const profile = await getCachedUserProfile(userId)
 
   if (!profile?.managed_restaurant_id && !profile?.is_super_admin) {
     return (
@@ -29,37 +86,14 @@ export default async function CustomersPage() {
 
   let restaurantName = 'All Restaurants'
   if (profile?.managed_restaurant_id) {
-    const { data: restaurant } = await supabaseAdmin
-      .from('restaurants')
-      .select('name')
-      .eq('id', profile.managed_restaurant_id)
-      .single()
-    if (restaurant) restaurantName = restaurant.name
+    restaurantName = await getCachedRestaurantName(profile.managed_restaurant_id)
   }
 
-  let query = supabaseAdmin
-    .from('reviews')
-    .select(`
-      id,
-      rating_thumbs,
-      public_note,
-      photo_url,
-      created_at,
-      users ( id, full_name, email, phone_number ),
-      menu_items!inner (
-        id,
-        name,
-        menu_categories!inner ( restaurant_id )
-      )
-    `)
-    .order('created_at', { ascending: false })
-
-  if (!profile.is_super_admin) {
-    query = query.eq('menu_items.menu_categories.restaurant_id', profile.managed_restaurant_id)
-  }
-
-  const { data: reviews } = await query
-  const all = (reviews ?? []) as any[]
+  const reviews = await getCachedCustomerReviews(
+    profile.managed_restaurant_id,
+    profile.is_super_admin ?? false
+  )
+  const all = reviews as any[]
 
   // --- Insights data ---
   const oneWeekAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString()
