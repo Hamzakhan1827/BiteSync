@@ -1,0 +1,65 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<style>
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    background: #1a1f2e;
+    display: flex;
+    align-items: center;
+    justify-content: flex-start;
+    padding: 16px 20px;
+    width: 300px;
+    height: 76px;
+  }
+  .cravesync-logo {
+    display: flex;
+    align-items: center;
+    gap: 10px;
+    text-decoration: none;
+    user-select: none;
+  }
+  .logo-wordmark {
+    font-family: 'Inter', 'Segoe UI', system-ui, sans-serif;
+    font-size: 24px;
+    font-weight: 700;
+    letter-spacing: -0.4px;
+    line-height: 1;
+  }
+  .logo-wordmark .crave { color: #ffffff; }
+  .logo-wordmark .sync  { color: #10b981; }
+</style>
+</head>
+<body>
+<a class="cravesync-logo" href="#">
+  <svg width="42" height="42" viewBox="0 0 44 44" fill="none" xmlns="http://www.w3.org/2000/svg">
+    <rect width="44" height="44" rx="10" fill="#0f172a"/>
+    <!-- Left bracket -->
+    <rect x="7"  y="9"  width="2.5" height="26" rx="1.25" fill="#10b981"/>
+    <rect x="7"  y="9"  width="8.5" height="2.5" rx="1.25" fill="#10b981"/>
+    <rect x="7"  y="32.5" width="8.5" height="2.5" rx="1.25" fill="#10b981"/>
+    <!-- Right bracket -->
+    <rect x="34.5" y="9"  width="2.5" height="26" rx="1.25" fill="#10b981"/>
+    <rect x="28"   y="9"  width="8.5" height="2.5" rx="1.25" fill="#10b981"/>
+    <rect x="28"   y="32.5" width="8.5" height="2.5" rx="1.25" fill="#10b981"/>
+    <!-- Fork tines -->
+    <rect x="14" y="12" width="1.8" height="9" rx="0.9" fill="white"/>
+    <rect x="17" y="12" width="1.8" height="9" rx="0.9" fill="white"/>
+    <rect x="20" y="12" width="1.8" height="9" rx="0.9" fill="white"/>
+    <!-- Fork neck -->
+    <rect x="14.5" y="20.5" width="6.8" height="1.5" rx="0.75" fill="white"/>
+    <!-- Fork handle -->
+    <rect x="16.5" y="21.5" width="2.8" height="10" rx="1.4" fill="white"/>
+    <!-- Spoon head -->
+    <ellipse cx="28" cy="15.5" rx="2.8" ry="3.5" fill="white"/>
+    <!-- Spoon handle -->
+    <rect x="26.8" y="18.5" width="2.4" height="13" rx="1.2" fill="white"/>
+  </svg>
+
+  <div class="logo-wordmark">
+    <span class="crave">Crave</span><span class="sync">Sync</span>
+  </div>
+</a>
+</body>
+</html>
