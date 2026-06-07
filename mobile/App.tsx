@@ -222,6 +222,109 @@ export default function App() {
   };
 
   // --- EFFECTS ---
+  // --- WEB NAVIGATION POPSTATE SYNC ---
+  const isPoppingRef = useRef(false);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+
+    // Replace the initial state on mount
+    window.history.replaceState({
+      tab: currentTab,
+      selectedRestaurantId: selectedRestaurant?.id,
+      detailItemId: detailItem?.id,
+      homeView,
+      fullScreenImage,
+    }, '');
+
+    const handlePopState = async (event: PopStateEvent) => {
+      isPoppingRef.current = true;
+      const state = event.state;
+      if (state) {
+        setCurrentTab(state.tab || 'home');
+        setHomeView(state.homeView || 'landing');
+        setFullScreenImage(state.fullScreenImage || null);
+        
+        // Restore restaurant object from ID if it matches
+        if (state.selectedRestaurantId) {
+          const restObj = restaurants.find((r: any) => r.id === state.selectedRestaurantId);
+          if (restObj) {
+            setSelectedRestaurant(restObj);
+            fetchMenu(restObj.id);
+          } else {
+            // Fetch fallback
+            const { data } = await supabase.from('restaurants').select('*').eq('id', state.selectedRestaurantId).single();
+            if (data) {
+              setSelectedRestaurant(data);
+              fetchMenu(data.id);
+            }
+          }
+        } else {
+          setSelectedRestaurant(null);
+        }
+
+        // Restore detail item object from ID
+        if (state.detailItemId) {
+          const itemObj = menuItems.find((it: any) => it.id === state.detailItemId);
+          if (itemObj) {
+            setDetailItem(itemObj);
+          } else {
+            const { data } = await supabase
+              .from('menu_items')
+              .select('id, name, price, description, image_url, menu_categories!inner(id, name, restaurant_id)')
+              .eq('id', state.detailItemId)
+              .single();
+            if (data) setDetailItem(data);
+          }
+        } else {
+          setDetailItem(null);
+          setItemReviews([]);
+        }
+      } else {
+        // Fallback to root state
+        setCurrentTab('home');
+        setSelectedRestaurant(null);
+        setDetailItem(null);
+        setHomeView('landing');
+        setFullScreenImage(null);
+      }
+      setTimeout(() => {
+        isPoppingRef.current = false;
+      }, 50);
+    };
+
+    window.addEventListener('popstate', handlePopState);
+    return () => window.removeEventListener('popstate', handlePopState);
+  }, [restaurants, menuItems]);
+
+  useEffect(() => {
+    if (Platform.OS !== 'web') return;
+    if (isPoppingRef.current) return;
+
+    // Avoid duplicate pushing of the exact same state
+    const histState = window.history.state;
+    if (
+      histState &&
+      histState.tab === currentTab &&
+      histState.selectedRestaurantId === selectedRestaurant?.id &&
+      histState.detailItemId === detailItem?.id &&
+      histState.homeView === homeView &&
+      histState.fullScreenImage === fullScreenImage
+    ) {
+      return;
+    }
+
+    const state = {
+      tab: currentTab,
+      selectedRestaurantId: selectedRestaurant?.id,
+      detailItemId: detailItem?.id,
+      homeView,
+      fullScreenImage,
+    };
+
+    window.history.pushState(state, '');
+  }, [currentTab, selectedRestaurant, detailItem, homeView, fullScreenImage]);
+
   useEffect(() => {
     const interval = setInterval(() => setCurrentTime(Date.now()), 30000);
     return () => clearInterval(interval);
@@ -1201,9 +1304,13 @@ export default function App() {
       <View style={[styles.header, (detailItem || selectedRestaurant) && { borderBottomWidth: 0 }]}>
         {(selectedRestaurant || (currentTab === 'home' && homeView === 'search')) ? (
           <TouchableOpacity style={{ flexDirection: 'row', alignItems: 'center' }} onPress={() => {
-          if (detailItem) { setDetailItem(null); setItemReviews([]); }
-            else if (selectedRestaurant) { setSelectedRestaurant(null); setMenuSearchQuery(''); }
-            else { setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }
+            if (Platform.OS === 'web') {
+              window.history.back();
+            } else {
+              if (detailItem) { setDetailItem(null); setItemReviews([]); }
+              else if (selectedRestaurant) { setSelectedRestaurant(null); setMenuSearchQuery(''); }
+              else { setHomeView('landing'); setSearchQuery(''); setMenuSearchResults([]); }
+            }
           }}>
             <ArrowLeft color="#111" size={22} style={{ marginRight: 8 }} />
             <Text style={[styles.headerTitle, { color: '#111', fontSize: 18 }]}>{detailItem ? selectedRestaurant?.name : selectedRestaurant ? 'Restaurants' : 'Search'}</Text>
