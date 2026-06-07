@@ -6,6 +6,13 @@
 @theme {
   --font-sans: var(--font-geist-sans);
   --font-mono: var(--font-geist-mono);
+
+  --animate-progress-loading: progress-loading 1.2s infinite ease-in-out;
+  @keyframes progress-loading {
+    0% { left: -35%; right: 100%; }
+    50% { left: 33%; right: 33%; }
+    100% { left: 100%; right: -35%; }
+  }
 }
 
 button, a, [role="button"], select, label[for] {
