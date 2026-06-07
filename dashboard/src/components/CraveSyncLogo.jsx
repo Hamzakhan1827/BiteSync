@@ -3,7 +3,7 @@ import React from 'react';
 const ACCENT = '#10b981';
 const BG = '#0f172a';
 
-export function CraveSyncMark({ size = 32, accent = ACCENT, bgColor = BG, className, ...rest }) {
+export function CraveSyncMark({ size = 32, accent = ACCENT, bgColor = BG, className = '', ...rest }) {
   return (
     <svg
       width={size}
@@ -40,7 +40,7 @@ export function CraveSyncMark({ size = 32, accent = ACCENT, bgColor = BG, classN
   );
 }
 
-export function CraveSyncLogo({ size = 28, accent = ACCENT, bgColor = BG, textColor = '#ffffff', gap = 10, className, ...rest }) {
+export function CraveSyncLogo({ size = 28, accent = ACCENT, bgColor = BG, textColor = '#ffffff', gap = 10, className = '', ...rest }) {
   return (
     <span
       className={className}
@@ -63,7 +63,7 @@ export function CraveSyncLogo({ size = 28, accent = ACCENT, bgColor = BG, textCo
   );
 }
 
-export function CraveSyncWordmark({ height = 32, accent = ACCENT, bgColor = BG, textColor = '#ffffff', className, ...rest }) {
+export function CraveSyncWordmark({ height = 32, accent = ACCENT, bgColor = BG, textColor = '#ffffff', className = '', ...rest }) {
   return (
     <span
       className={className}
