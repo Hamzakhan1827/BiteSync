@@ -1019,7 +1019,7 @@ export default function App() {
     return (
       <View style={{ flex: 1, backgroundColor: '#0b1220', justifyContent: 'center', alignItems: 'center' }}>
         <ExpoStatusBar style="light" backgroundColor="#0b1220" translucent={false} />
-        <CraveSyncMark size={110} tileColor="#0b1220" accent="#00A86B" />
+        <CraveSyncMark size={110} accent="#10b981" bgColor="#0f172a" />
         <Text style={{ color: '#ffffff', fontSize: 34, fontWeight: '800', marginTop: 24, letterSpacing: -0.5 }}>
           Crave<Text style={{ color: '#00A86B' }}>Sync</Text>
         </Text>
