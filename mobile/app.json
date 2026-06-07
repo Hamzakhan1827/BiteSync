@@ -25,7 +25,18 @@
       "package": "com.cravesync.app"
     },
     "web": {
-      "favicon": "./assets/favicon.png"
+      "favicon": "./assets/favicon.png",
+      "bundler": "metro",
+      "pwa": {
+        "name": "CraveSync",
+        "shortName": "CraveSync",
+        "description": "Rate dishes and build your private bite diary.",
+        "background_color": "#ffffff",
+        "theme_color": "#10b981",
+        "display": "standalone",
+        "orientation": "portrait",
+        "icon": "./assets/logo.png"
+      }
     },
     "owner": "shehryar12131",
     "extra": {
