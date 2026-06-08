@@ -1,8 +1,8 @@
 # CraveSync
 
-> **Your personal food memory, every bite.**
+> **Direct-to-kitchen feedback pipeline, de-risking every meal.**
 
-CraveSync is a mobile-first food intelligence platform built for Karachi's dining scene. It lets users build a private food diary, leave public restaurant reviews, and discover what's trending — while giving restaurant operators a live dashboard to monitor menu performance and customer sentiment.
+CraveSync is a B2B2C dining intelligence platform built for Karachi's culinary scene. It connects diners' plates directly to the restaurant kitchen—allowing diners to rate dishes instantly in 3 seconds and submit feedback directly to the chef, while giving operators a real-time dashboard to monitor dish performance, prevent bad public reviews, and automate customer winback campaigns.
 
 ---
 
@@ -19,17 +19,18 @@ CraveSync is a mobile-first food intelligence platform built for Karachi's dinin
 
 ## The Product
 
-### Mobile App — for diners
-- **Food Diary** — every meal you've reviewed, timestamped and private
-- **Restaurant Discovery** — browse restaurants, explore menus by category
-- **Reviews** — thumbs up/down + a private note (only you see it) + a public note (restaurant sees it)
-- **Trending & Favourites** — personalized home screen based on your history
-- **Search** — inline dropdown search for restaurants and dishes with recent history
+### Diner Interface (Web-based & App)
+- **Direct-to-Chef Hook** — send feedback directly to the kitchen (avoiding noisy public review sites)
+- **Frictionless QR Rating** — scan tabletop QR, rate with one tap in 3 seconds (no app install required)
+- **Dish-Level Search & Ratings** — find the best dish before ordering (de-risking the meal)
+- **Trending & Popularity** — real-time trending dishes based on verified dine-in reviews
+- **Optional Food History** — browse your past reviews and saved favorites in your profile
 
-### Dashboard — for restaurant operators
-- **Menu Management** — add/edit restaurants, categories, and menu items
-- **Live Feedback** — read public reviews sorted by item and date
-- **Performance** — see which dishes have the most positive sentiment
+### Restaurant Operator Dashboard
+- **Real-Time Sentiment Pipeline** — read dish ratings and chef feedback as soon as they are submitted
+- **Dish-Level Analytics** — identify underperforming menu items before they drive customers away
+- **Automated Winback Campaigns** — set up rules to auto-email discounts or apology offers to dissatisfied diners
+- **Instagram Bio Menu Link** — embed your live, highly-rated menu directly in your Instagram bio
 
 ---
 

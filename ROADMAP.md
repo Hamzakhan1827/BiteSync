@@ -100,15 +100,17 @@ Each phase has **Major Milestones** and **Minor Tasks** underneath them.
 
 ### Major Milestones
 
-- [x] **Diner survey live** — Google Forms, 70+ responses (target 100+)
+- [x] **Diner survey live** — Google Forms, 190 responses completed!
 - [ ] **Restaurant owner survey live** — Google Forms (target 15+ responses)
 - [ ] **Domain purchased** — `cravesync.tech` on Namecheap
 - [ ] **Business email configured** — `hamza@cravesync.tech` via Zoho Mail (free)
 - [ ] **Transactional email set up** — Resend connected to Supabase Edge Functions
 - [ ] **Email warmup started** — 3-week warmup before cold outreach
-- [ ] **Survey data analysed** — 100+ diner + 15+ restaurant responses reviewed
+- [x] **Survey data analysed** — 190 diner responses analysed, assumptions pivoted
 - [ ] **Pitch deck created** — data-backed, restaurant-focused, 8-10 slides
 - [ ] **Demo video recorded** — 3-5 min screen recording of app + dashboard live
+- [ ] **Web-based one-tap QR rating interface developed** (Zero-install, mobile-browser optimized page for tables)
+- [ ] **Instagram bio menu link page developed** (Next.js route showing verified trending dishes for socials)
 
 ### Minor Tasks
 
