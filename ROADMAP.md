@@ -339,33 +339,34 @@ Each phase has **Major Milestones** and **Minor Tasks** underneath them.
 - [ ] Use this proof to approach restaurant #2 and #3
 - [ ] Begin charging restaurant #2 onward (beta is over for new clients)
 
----
+## Pricing & Premium Tier Strategy (GTM Plan)
 
-## Upcoming Phases (Future Planning)
+> **Go-To-Market Offer:** 3 months free trial across all tiers to drive rapid B2B restaurant onboarding and database scaling.
 
-### Phase 4 — Revenue & Scale
-- [ ] Define pricing tiers (Basic / Pro / Enterprise for restaurant sizes)
-- [ ] SaaS billing portal — Stripe or SadaPay integration
-- [ ] Grow to 10 paying restaurant clients in Karachi
-- [ ] AI review summariser — *"67% said the karahi was too oily this week"*
-- [ ] At-risk alerts — dish sentiment declining → notify restaurant automatically
-- [ ] Data export for restaurants (CSV download)
+### 1. Basic Tier (The Feedback Starter)
+*Designed for small cafes and local eateries looking to capture structured dish-level feedback.*
+- [ ] Zero-install, mobile-browser optimized tabletop QR code ratings (Thumbs Up/Down + Chef note)
+- [ ] Live feedback feed sorted by menu items and date
+- [ ] Menu Manager for item and category listings
+- [ ] Instagram Bio Menu Link (link social traffic directly to verified menu ratings)
 
-### Phase 5 — City Expansion
-- [ ] Expand to Lahore (second market)
-- [ ] Hire first sales person for on-ground restaurant outreach
-- [ ] App Store listing (iOS) + Google Play Store (Android)
-- [ ] PR — pitch to Dawn, The News, TechJuice, Propakistani
+### 2. Pro Tier (The Growth Accelerator) — Premium Tier
+*Designed for active standalone restaurants looking to automate diner re-engagement and marketing.*
+- [ ] **Everything in Basic**
+- [ ] **Automated Winback Campaigns**: Configurable triggers to automatically email apology letters, discount codes, or free items to diners who submitted negative reviews.
+- [ ] **AI Review Summarizer**: Real-time summaries of text feedback (e.g., *"67% of customers said the chicken was too dry"*).
+- [ ] **Verified Social Proof Widget**: Automated dashboard generator to export verified positive ratings as branded Instagram Story graphics.
+- [ ] **Automated Weekly Performance Reports**: WhatsApp/Email digest of positive/negative trends sent directly to owners without requiring dashboard login.
+- [ ] **Data Export**: Full CSV download of reviews, diners, and ratings history.
 
-### Future Features (Evaluate Each Quarter)
-- [ ] Waiter rating + digital tip
-- [ ] Dietary alerts (flag allergens on menu items)
-- [ ] QR code generator in dashboard (restaurant generates their own)
-- [ ] Gamification — reviewer badges and streaks
-- [ ] Social dining — shareable food diary link
-- [ ] Menu A/B testing for restaurants
-- [ ] POS system integration (reorder what you had last time)
-- [ ] Franchise dashboard (multi-branch restaurant analytics)
+### 3. Enterprise Tier (The Kitchen Controller) — Premium Tier
+*Designed for premium dine-in establishments and multi-branch franchises looking for operational control.*
+- [ ] **Everything in Pro**
+- [ ] **Real-Time "Table Rescue" Alerts**: Instant SMS/WhatsApp/Push notifications to managers for negative table reviews, enabling staff to fix service issues before the customer leaves.
+- [ ] **Shift & Chef Performance Tracking**: Correlate dish ratings and feedback with specific kitchen shifts (lunch vs. dinner) or kitchen teams (Chef A vs. Chef B).
+- [ ] **Multi-Branch Franchise Dashboard**: Aggregated analytics and comparative menu testing across multiple locations.
+- [ ] **POS System Integration**: Sync menu items and order data directly with local point-of-sale systems.
+- [ ] **Dietary & Allergen Alerts**: Custom warning tags for food restrictions (gluten-free, peanut allergy, vegan).
 
 ---
 
@@ -373,13 +374,12 @@ Each phase has **Major Milestones** and **Minor Tasks** underneath them.
 
 | Metric | Phase 2 Target | Phase 3 Target |
 |--------|---------------|----------------|
-| Survey responses (diners) | 100+ | — |
+| Survey responses (diners) | 190 (Completed) | — |
 | Survey responses (restaurants) | 15+ | — |
-| Restaurant clients signed | — | 1-3 |
-| App installs | — | 50-200 |
-| Reviews submitted | — | 200+ |
-| Dashboard logins/week by restaurants | — | Weekly (engaged) |
-| Revenue | $0 | $0 (beta) |
+| Restaurant clients signed (3-mo trial) | — | 3-5 |
+| PWA/App monthly active reviews | — | 500+ |
+| Weekly dashboard logins by managers | — | Weekly (engaged) |
+| Trial to Paid Conversion Rate | — | 30%+ (Pro Tier) |
 
 ---
 
